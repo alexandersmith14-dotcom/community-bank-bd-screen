@@ -1,0 +1,6 @@
+# Raw data pulls and generated outputs are rebuilt by the pipeline / Action.
+data/
+output/
+__pycache__/
+*.pyc
+_syntaxcheck.js

@@ -1,0 +1,33 @@
+name: Refresh dashboard
+
+# Rebuilds the target list + dashboard from the latest FDIC data and publishes
+# it to GitHub Pages. Runs weekly (FDIC data changes quarterly, so most runs are
+# no-ops) and on demand from the Actions tab.
+on:
+  schedule:
+    - cron: "0 6 * * 1"   # Mondays 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pandas requests
+      - run: python 01_fetch.py
+      - run: python 02_screen.py
+      - run: python 03_dashboard.py
+      - run: cp output/dashboard.html docs/index.html
+      - name: Commit if the dashboard changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/index.html
+          git diff --staged --quiet || git commit -m "Auto-refresh dashboard from latest FDIC data"
+          git push
