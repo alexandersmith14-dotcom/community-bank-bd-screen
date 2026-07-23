@@ -11,13 +11,16 @@ python 01_fetch.py       # current-quarter FDIC snapshot  (needs internet)
 python 02_screen.py      # snapshot signals -> targets.csv + all_banks.csv
 python 04_history.py     # 20 quarters of history         (needs internet)
 python 05_trajectory.py  # 5-year trend features -> enriched targets.csv
-python 03_dashboard.py   # interactive dashboard (snapshot + trajectory)
+python 06_edgar.py       # SEC EDGAR board/execs for public banks (needs internet)
+python 03_dashboard.py   # interactive dashboard (snapshot + trajectory + officers)
 ```
 
 Dates auto-detect the latest quarter, so refreshing is just re-running. Re-tuning
 snapshot thresholds needs only step 2 (+5 if you want trends re-merged); trend
-thresholds live in `05_trajectory.py`. Steps 04/05 are optional — without them
-the dashboard still works as a pure snapshot.
+thresholds live in `05_trajectory.py`. Steps 04/05/06 are optional — without them
+the dashboard still works as a pure snapshot. Step 06 (SEC EDGAR) adds verified
+board/executive names for the *public* banks and takes a few minutes (rate-limited
+to SEC's guidelines).
 
 ## Output
 

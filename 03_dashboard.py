@@ -42,13 +42,20 @@ def main():
     df["signals"] = df["signals"].fillna("")
     records = df.where(pd.notnull(df), None).to_dict(orient="records")
 
+    certs = {str(int(c)) for c in df["CERT"]}
+
     # Sparkline series (only for banks shown, to keep the file lean).
     spark = {"quarters": [], "series": {}}
     if os.path.exists("output/spark.json"):
         full = json.load(open("output/spark.json"))
-        certs = {str(int(c)) for c in df["CERT"]}
         spark = {"quarters": full["quarters"],
                  "series": {k: v for k, v in full["series"].items() if k in certs}}
+
+    # SEC EDGAR officers for public banks (only for banks shown).
+    edgar = {}
+    if os.path.exists("output/edgar_officers.json"):
+        full = json.load(open("output/edgar_officers.json"))
+        edgar = {k: v for k, v in full.items() if k in certs}
 
     rep = current_repdte()
     meta = {
@@ -63,6 +70,7 @@ def main():
         .replace("/*__DATA__*/", json.dumps(records))
         .replace("/*__META__*/", json.dumps(meta))
         .replace("/*__SPARK__*/", json.dumps(spark))
+        .replace("/*__EDGAR__*/", json.dumps(edgar))
     )
     with open("output/dashboard.html", "w", encoding="utf-8") as f:
         f.write(html)
@@ -186,12 +194,23 @@ TEMPLATE = r"""<!doctype html>
   .gd { color:var(--good); font-weight:600; }
   .count-note { color:var(--muted); font-size:12px; margin:4px 2px 10px; }
   a.reset { color:var(--series-1); cursor:pointer; font-size:12px; }
+  #tip { position:fixed; z-index:1000; max-width:300px; background:var(--text-primary); color:var(--page);
+         padding:8px 11px; border-radius:8px; font-size:12px; line-height:1.4; pointer-events:none;
+         opacity:0; transition:opacity .1s; box-shadow:0 6px 20px rgba(0,0,0,.28); }
+  [data-tip] { cursor:help; }
+  .chip[data-tip], .tile[data-tip] { cursor:pointer; }
   a.ldlink { display:inline-block; color:#fff; background:var(--series-1); text-decoration:none;
              font-size:13px; font-weight:600; padding:7px 14px; border-radius:8px; }
   a.ldlink:hover { filter:brightness(1.08); }
+  .pub { font-size:10.5px; font-weight:600; color:var(--good); border:1px solid var(--good); border-radius:4px; padding:0 4px; vertical-align:middle; }
+  .offlist { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:3px 18px; padding:2px 2px 6px; }
+  .offrow { display:flex; justify-content:space-between; gap:10px; border-bottom:1px dotted var(--grid); padding:3px 0; }
+  .offname { font-weight:600; font-size:12.5px; }
+  .offtitle { color:var(--text-secondary); font-size:11.5px; text-align:right; }
 </style>
 </head>
 <body>
+<div id="tip"></div>
 <div class="wrap">
   <header>
     <h1>Community-Bank BD Screen</h1>
@@ -238,7 +257,7 @@ TEMPLATE = r"""<!doctype html>
         </select>
       </div>
     </div>
-    <div class="chiplead">Filter by signal — grouped by the KR RAS service line each one feeds:</div>
+    <div class="chiplead">Filter by signal — grouped by the KR RAS service line each one feeds. <b>Hover any pill for its criteria.</b></div>
     <div id="sigchips"></div>
   </div>
 
@@ -261,6 +280,7 @@ TEMPLATE = r"""<!doctype html>
 const DATA = /*__DATA__*/;
 const META = /*__META__*/;
 const SPARK = /*__SPARK__*/;
+const EDGAR = /*__EDGAR__*/;
 
 const SIGNALS = [
   ["excess_capital","Excess capital","snapshot"],
@@ -310,6 +330,40 @@ const CHIP_GROUPS = [
   ["Internal Audit — liquidity", ["funding_liquidity"]],
   ["Refer — other KR practice", ["excess_capital","weak_profitability","capital_building"]],
 ];
+
+// Plain-language criteria shown on hover.
+const DESC = {
+  excess_capital: "Equity/assets in the top 20% of its size peer group — well-capitalized, with a deployment question.",
+  credit_deterioration: "Net charge-offs or noncurrent assets in the worst 15% of size peers.",
+  under_reserved: "Credit deterioration AND loan-loss allowance under 40% of noncurrent loans.",
+  weak_efficiency: "Efficiency ratio 70%+ and among the worst 20% of size peers (heavy cost base).",
+  funding_liquidity: "Loan-to-deposit 100%+, or worst 15% of peers, or brokered deposits 10%+ of deposits.",
+  rapid_growth: "Total assets up 15%+ year over year.",
+  near_10b_threshold: "Assets between $8B and $10B — approaching the $10B regulatory tier.",
+  near_fdicia_1b: "Assets between $850M and $1.15B — around the $1B FDICIA ICFR trigger.",
+  weak_profitability: "ROA in the bottom 15% of size peers, or negative.",
+  bsa_aml_scaling: "Assets up 20%+ year over year — growth outpacing the compliance program.",
+  capital_building: "5-year trend: equity/assets rising 0.40+ pts per year and +0.75 pts over 2 years.",
+  credit_turning: "5-year trend: charge-offs or noncurrent rising 0.15+ pts per year.",
+  growth_accelerating: "5-year trend: assets 10%+ YoY and 3+ pts faster than the year before.",
+  runway_to_10b: "5-year trend: $5B+ now and on pace to cross $10B within 12 quarters.",
+  margin_eroding: "5-year trend: ROA falling and efficiency ratio rising (worsening margins).",
+};
+const GROUP_DESC = {
+  "BSA/AML & Sanctions": "KR RAS: BSA/AML program build & independent testing, OFAC/sanctions.",
+  "FDICIA / $10B readiness": "KR RAS: FDICIA ICFR attestation and $10B-tier readiness (CFPB, expanded exams).",
+  "Internal Audit & CECL (credit)": "KR RAS: Internal Audit loan review, CECL model validation, ALLL governance.",
+  "Robotic Process Automation": "KR RAS: automating manual compliance and back-office processes.",
+  "Internal Audit — liquidity": "KR RAS: Internal Audit of liquidity and funding risk controls.",
+  "Refer — other KR practice": "Not RAS — refer to capital/M&A or earnings advisory; shown for completeness.",
+};
+const TILE_DESC = {
+  all: "Reset every filter and show the full flagged list.",
+  ge3: "Banks tripping 3 or more signals — the densest opportunities.",
+  aml: "Banks flagged for BSA/AML scaling, rapid growth, or accelerating growth.",
+  ten: "Banks approaching $10B or on a short runway to it.",
+};
+function esc(s){ return String(s).replace(/"/g,"&quot;"); }
 
 // Decision-maker titles to target on LinkedIn, by service-line group.
 const LD_TITLES = {
@@ -403,7 +457,7 @@ function renderTiles(rows) {
     ["$10B-tier prospects", ten.toLocaleString(), "Consumer Compliance + IA readiness", "ten"],
   ];
   document.getElementById("tiles").innerHTML = t.map(x=>
-    `<div class="tile clickable" onclick="tileAction('${x[3]}')" title="Apply this view">`+
+    `<div class="tile clickable" onclick="tileAction('${x[3]}')" data-tip="${esc(TILE_DESC[x[3]]||"")}">`+
     `<div class="k">${x[0]}</div><div class="v">${x[1]}</div><div class="s">${x[2]}</div></div>`).join("");
 }
 
@@ -424,9 +478,9 @@ function renderChips(rows) {
   const cat = Object.fromEntries(SIGNALS.map(s=>[s[0], s[2]]));
   document.getElementById("sigchips").innerHTML = CHIP_GROUPS.map(g=>{
     const chips = g[1].map(k=>
-      `<span class="chip ${cat[k]} ${selected.has(k)?"on":""}" onclick="toggle('${k}')">${SIGLAB[k]}<span class="n">${counts[k]}</span></span>`
+      `<span class="chip ${cat[k]} ${selected.has(k)?"on":""}" data-tip="${esc(DESC[k]||"")}" onclick="toggle('${k}')">${SIGLAB[k]}<span class="n">${counts[k]}</span></span>`
     ).join("");
-    return `<div class="chipgroup"><div class="chipgroup-lab">${g[0]}</div><div class="chips">${chips}</div></div>`;
+    return `<div class="chipgroup"><div class="chipgroup-lab" data-tip="${esc(GROUP_DESC[g[0]]||"")}">${g[0]}</div><div class="chips">${chips}</div></div>`;
   }).join("");
 }
 
@@ -462,8 +516,10 @@ function renderTable(rows) {
     (rows.length>cap?` (top ${cap} by current sort — narrow the filters to see the rest)`:"");
   document.getElementById("tbody").innerHTML = show.map((r,i)=>{
     const tags = sigList(r).map(s=>`<span class="sigtag">${SIGLAB[s]||s}</span>`).join("");
+    const eg = EDGAR[String(r.CERT)];
+    const pub = eg ? ` <span class="pub" title="Public — SEC registrant">${eg.ticker||"public"}</span>` : "";
     return `<tr onclick="expand(${i})" data-i="${i}">`+
-      `<td>${r.NAME||""}</td><td>${r.STALP||""}</td><td>${r.CITY||""}</td>`+
+      `<td>${r.NAME||""}${pub}</td><td>${r.STALP||""}</td><td>${r.CITY||""}</td>`+
       `<td class="num">${fmt(r.asset_musd,"num",0)}</td><td>${r.asset_band||""}</td>`+
       `<td class="num">${r.score}</td><td class="num">${r.n_signals}</td>`+
       `<td><div class="sigtags">${tags}</div></td></tr>`;
@@ -555,10 +611,23 @@ function expand(i) {
     `<a class="ldlink" href="${ld.url}" target="_blank" rel="noopener">Find decision-makers at ${r.NAME} on LinkedIn →</a>`+
     `<div class="muted" style="font-size:12px;margin-top:4px">Targets: ${ld.titles.join(" · ")}. Opens a LinkedIn people search — review and connect manually.</div>`;
 
+  // Verified board & executives for public banks (SEC EDGAR)
+  const eg = EDGAR[String(r.CERT)];
+  let egBlock = "";
+  if (eg) {
+    const ppl = (eg.officers||[]).map(o=>
+      `<div class="offrow"><span class="offname">${o.name}</span><span class="offtitle">${o.title||o.role}</span></div>`).join("");
+    egBlock =
+      `<div class="trendhdr">Board & executives — SEC filings `+
+      `<span class="muted">${eg.ticker?("· "+eg.ticker+" "):""}· ${eg.sec_name}</span></div>`+
+      `<div class="offlist">${ppl||'<span class="muted">No named insiders parsed</span>'}</div>`+
+      `<a class="muted" style="font-size:12px" href="${eg.edgar}" target="_blank" rel="noopener">SEC filings & latest proxy (DEF 14A) →</a>`;
+  }
+
   tr.innerHTML = `<td colspan="8"><div style="padding:4px 2px 10px">`+
     `<div style="color:var(--text-secondary);margin-bottom:8px">FDIC CERT ${r.CERT}</div>`+
     `<div class="trendhdr">KR RAS services to pitch</div><div class="svcmap">${svcRows}</div>`+
-    ldBlock+
+    ldBlock+egBlock+
     `<div class="trendhdr">Financials</div><div class="detail-grid">${cells}</div>${trendHtml}</div></td>`;
   const rowEl = document.querySelector(`tr[data-i="${i}"]`);
   rowEl.after(tr);
@@ -579,6 +648,21 @@ function init(){
     '<option value="">All states</option>' + states.map(s=>`<option>${s}</option>`).join("");
   document.getElementById("svcline").innerHTML =
     '<option value="">All service lines</option>' + CHIP_GROUPS.map(g=>`<option>${g[0]}</option>`).join("");
+
+  // Shared hover tooltip: shows the data-tip of whatever the cursor is over.
+  const tip = document.getElementById("tip");
+  document.addEventListener("mousemove", e=>{
+    const el = e.target.closest && e.target.closest("[data-tip]");
+    if (el && el.getAttribute("data-tip")) {
+      tip.textContent = el.getAttribute("data-tip");
+      tip.style.opacity = "1";
+      const pad = 14, r = tip.getBoundingClientRect();
+      let x = e.clientX + pad, y = e.clientY + pad;
+      if (x + r.width > innerWidth - 8) x = e.clientX - r.width - pad;
+      if (y + r.height > innerHeight - 8) y = e.clientY - r.height - pad;
+      tip.style.left = x + "px"; tip.style.top = y + "px";
+    } else { tip.style.opacity = "0"; }
+  });
   render();
 }
 init();

@@ -24,7 +24,8 @@ jobs:
       - run: python 02_screen.py      # snapshot signals + all_banks.csv
       - run: python 04_history.py     # 20 quarters of history
       - run: python 05_trajectory.py  # trend features -> enriched targets.csv
-      - run: python 03_dashboard.py   # dashboard (snapshot + trajectory)
+      - run: python 06_edgar.py       # SEC EDGAR officers for public banks
+      - run: python 03_dashboard.py   # dashboard (snapshot + trajectory + officers)
       - run: cp output/dashboard.html docs/index.html
       - name: Commit if the dashboard changed
         run: |

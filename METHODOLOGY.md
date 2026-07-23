@@ -101,6 +101,24 @@ The dashboard shows each flagged bank's equity/assets, ROA, assets, and
 noncurrent trend as sparklines in its drill-down. Thresholds live at the top of
 `05_trajectory.py`.
 
+## Reaching decision-makers
+
+Two aids sit in each bank's drill-down:
+
+- **LinkedIn people-search link** (all banks) — a deep link into LinkedIn's normal
+  search UI, pre-filtered to that bank and the decision-maker titles relevant to
+  its flagged services (BSA Officer/CCO for AML, CAE/Chief Credit for credit,
+  CFO/CRO for FDICIA, COO for RPA, plus CEO/President). You review and connect
+  manually — no scraping or automation.
+- **SEC EDGAR board & executives** (`06_edgar.py`, *public banks only*) — the bank
+  is matched to its SEC registrant (name normalization + bank-SIC confirmation) and
+  its directors/officers are pulled from recent Section 16 (Form 3/4/5) filings,
+  which are structured XML so the names are reliable. Public banks show a ticker
+  badge in the list and a verified name list plus a proxy-statement link in the
+  drill-down. Scope caveats: only publicly traded banks match (many community banks
+  are private/mutual), and Section 16 covers the board + principal officers, not
+  every functional head — so it complements the LinkedIn link rather than replacing it.
+
 ### Known limits
 
 - **BSA/AML is a proxy.** Program adequacy isn't visible in Call Report ratios;
