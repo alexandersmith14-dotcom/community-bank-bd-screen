@@ -30,38 +30,52 @@ TRAJ_COLS = [
     "EQV_slope", "EQV_d2y", "ROA_slope", "asset_yoy", "asset_accel",
     "runway_q", "n_quarters",
 ]
+# Credit-union financial columns (present only when 08_cu_screen.py has run).
+CU_COLS = [
+    "NW_RATIO", "NW_RATIO_pct", "DELINQ", "NCO", "LOAN_TO_SHARE",
+    "EXP_RATIO", "MEMBERS",
+]
 
 
 def main():
-    raw = pd.read_csv("output/targets.csv")
-    cols = [c for c in COLS if c in raw.columns]
+    banks = pd.read_csv("output/targets.csv")
+    banks["INST_TYPE"] = "Bank"
+    frames = [banks]
+    if os.path.exists("output/cu_targets.csv"):
+        frames.append(pd.read_csv("output/cu_targets.csv"))
+    raw = pd.concat(frames, ignore_index=True, sort=False)
+
     has_trend = all(c in raw.columns for c in TRAJ_COLS)
-    if has_trend:
-        cols = cols + TRAJ_COLS
+    embed = ["INST_TYPE"] + COLS + CU_COLS + (TRAJ_COLS if has_trend else [])
+    cols = [c for c in dict.fromkeys(embed) if c in raw.columns]
     df = raw[cols].copy()
     df["signals"] = df["signals"].fillna("")
     records = df.where(pd.notnull(df), None).to_dict(orient="records")
 
-    certs = {str(int(c)) for c in df["CERT"]}
+    # Bank CERTs only — sparklines and EDGAR are bank-side (avoid CU id collisions).
+    bank_certs = {str(int(c)) for c, t in zip(df["CERT"], df["INST_TYPE"])
+                  if t == "Bank" and pd.notnull(c)}
 
-    # Sparkline series (only for banks shown, to keep the file lean).
     spark = {"quarters": [], "series": {}}
     if os.path.exists("output/spark.json"):
         full = json.load(open("output/spark.json"))
         spark = {"quarters": full["quarters"],
-                 "series": {k: v for k, v in full["series"].items() if k in certs}}
+                 "series": {k: v for k, v in full["series"].items() if k in bank_certs}}
 
-    # SEC EDGAR officers for public banks (only for banks shown).
     edgar = {}
     if os.path.exists("output/edgar_officers.json"):
         full = json.load(open("output/edgar_officers.json"))
-        edgar = {k: v for k, v in full.items() if k in certs}
+        edgar = {k: v for k, v in full.items() if k in bank_certs}
 
     rep = current_repdte()
+    n_bank = int((df["INST_TYPE"] == "Bank").sum())
+    n_cu = int((df["INST_TYPE"] == "Credit Union").sum())
     meta = {
         "quarter": f"Q{(int(rep[4:6]) - 1) // 3 + 1} {rep[:4]}",
         "date": f"{rep[4:6]}/{rep[:4]}",
         "flagged": len(df),
+        "nBank": n_bank,
+        "nCU": n_cu,
         "hasTrend": has_trend,
     }
 
@@ -74,7 +88,7 @@ def main():
     )
     with open("output/dashboard.html", "w", encoding="utf-8") as f:
         f.write(html)
-    print(f"Wrote output/dashboard.html  ({len(df):,} banks)")
+    print(f"Wrote output/dashboard.html  ({n_bank:,} banks + {n_cu:,} credit unions)")
 
     # Artifact-ready fragment: the claude.ai Artifact host supplies its own
     # <!doctype>/<head>/<body>, so we emit only the <style> block + body inner
@@ -203,6 +217,7 @@ TEMPLATE = r"""<!doctype html>
              font-size:13px; font-weight:600; padding:7px 14px; border-radius:8px; }
   a.ldlink:hover { filter:brightness(1.08); }
   .pub { font-size:10.5px; font-weight:600; color:var(--good); border:1px solid var(--good); border-radius:4px; padding:0 4px; vertical-align:middle; }
+  .cu { font-size:10.5px; font-weight:600; color:var(--series-1); border:1px solid var(--series-1); border-radius:4px; padding:0 4px; vertical-align:middle; }
   .offlist { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:3px 18px; padding:2px 2px 6px; }
   .offrow { display:flex; justify-content:space-between; gap:10px; border-bottom:1px dotted var(--grid); padding:3px 0; }
   .offname { font-weight:600; font-size:12.5px; }
@@ -227,6 +242,14 @@ TEMPLATE = r"""<!doctype html>
         <input type="text" id="q" placeholder="e.g. Republic, Miami" oninput="render()">
       </div>
       <div class="field">
+        <label>Institution type</label>
+        <select id="itype" onchange="render()">
+          <option value="">Banks + Credit Unions</option>
+          <option value="Bank">Banks only</option>
+          <option value="Credit Union">Credit Unions only</option>
+        </select>
+      </div>
+      <div class="field">
         <label>KR RAS service line</label>
         <select id="svcline" onchange="render()"></select>
       </div>
@@ -239,7 +262,7 @@ TEMPLATE = r"""<!doctype html>
         <select id="band" onchange="render()">
           <option value="">All sizes</option>
           <option>&lt;$250M</option><option>$250M-$1B</option>
-          <option>$1B-$3B</option><option>$3B-$10B</option>
+          <option>$1B-$3B</option><option>$3B+</option>
         </select>
       </div>
       <div class="field">
@@ -291,6 +314,7 @@ const SIGNALS = [
   ["rapid_growth","Rapid growth","snapshot"],
   ["near_10b_threshold","Approaching $10B","snapshot"],
   ["near_fdicia_1b","Near $1B (FDICIA)","snapshot"],
+  ["near_500m_audit","Near $500M (CU audit)","snapshot"],
   ["weak_profitability","Weak profitability","snapshot"],
   ["bsa_aml_scaling","BSA/AML scaling","snapshot"],
   // 5-year trajectory signals (direction of travel)
@@ -304,9 +328,10 @@ const SIGLAB = Object.fromEntries(SIGNALS.map(s => [s[0], s[1]]));
 
 // Signal -> KR Risk Advisory Services line (kept in step with the Python maps).
 const SIGSERVICE = {
-  near_10b_threshold:  "$10B readiness — Consumer Compliance (CFPB), BSA/AML, Internal Audit; FDICIA ICFR attestation",
+  near_10b_threshold:  "$10B readiness — Consumer Compliance (CFPB), BSA/AML, Internal Audit; ICFR / stress-testing (FDICIA banks, NCUA credit unions)",
   runway_to_10b:       "$10B runway — Consumer Compliance, BSA/AML, Internal Audit; FDICIA ICFR attestation",
   near_fdicia_1b:      "FDICIA Part 363 ICFR attestation readiness + Internal Audit (approaching/crossing $1B)",
+  near_500m_audit:     "NCUA Part 715 CPA financial-statement audit / supervisory committee support (credit unions ~$500M)",
   bsa_aml_scaling:     "BSA/AML program enhancement + independent testing",
   rapid_growth:        "BSA/AML scaling, Internal Audit, risk assessment; FDICIA ICFR if crossing $1B",
   growth_accelerating: "BSA/AML scaling + Internal Audit; FDICIA ICFR readiness if crossing $1B",
@@ -324,7 +349,7 @@ const SIGSERVICE = {
 // Signal pills grouped under the KR RAS service line they feed.
 const CHIP_GROUPS = [
   ["BSA/AML & Sanctions", ["bsa_aml_scaling","rapid_growth","growth_accelerating"]],
-  ["FDICIA / $10B readiness", ["near_fdicia_1b","near_10b_threshold","runway_to_10b"]],
+  ["FDICIA / audit / $10B readiness", ["near_fdicia_1b","near_500m_audit","near_10b_threshold","runway_to_10b"]],
   ["Internal Audit & CECL (credit)", ["credit_deterioration","under_reserved","credit_turning"]],
   ["Robotic Process Automation", ["weak_efficiency","margin_eroding"]],
   ["Internal Audit — liquidity", ["funding_liquidity"]],
@@ -341,6 +366,7 @@ const DESC = {
   rapid_growth: "Total assets up 15%+ year over year.",
   near_10b_threshold: "Assets between $8B and $10B — approaching the $10B regulatory tier.",
   near_fdicia_1b: "Assets between $850M and $1.15B — around the $1B FDICIA ICFR trigger.",
+  near_500m_audit: "Credit unions ~$425M–$575M — around the $500M NCUA Part 715 CPA-audit trigger.",
   weak_profitability: "ROA in the bottom 15% of size peers, or negative.",
   bsa_aml_scaling: "Assets up 20%+ year over year — growth outpacing the compliance program.",
   capital_building: "5-year trend: equity/assets rising 0.40+ pts per year and +0.75 pts over 2 years.",
@@ -351,7 +377,7 @@ const DESC = {
 };
 const GROUP_DESC = {
   "BSA/AML & Sanctions": "KR RAS: BSA/AML program build & independent testing, OFAC/sanctions.",
-  "FDICIA / $10B readiness": "KR RAS: FDICIA ICFR attestation and $10B-tier readiness (CFPB, expanded exams).",
+  "FDICIA / audit / $10B readiness": "KR RAS: FDICIA ICFR (banks) & NCUA $500M CPA audit (credit unions); $10B-tier readiness (CFPB, stress testing).",
   "Internal Audit & CECL (credit)": "KR RAS: Internal Audit loan review, CECL model validation, ALLL governance.",
   "Robotic Process Automation": "KR RAS: automating manual compliance and back-office processes.",
   "Internal Audit — liquidity": "KR RAS: Internal Audit of liquidity and funding risk controls.",
@@ -368,7 +394,7 @@ function esc(s){ return String(s).replace(/"/g,"&quot;"); }
 // Decision-maker titles to target on LinkedIn, by service-line group.
 const LD_TITLES = {
   "BSA/AML & Sanctions": ["BSA Officer","Chief Compliance Officer","AML"],
-  "FDICIA / $10B readiness": ["Chief Financial Officer","Controller","Chief Risk Officer"],
+  "FDICIA / audit / $10B readiness": ["Chief Financial Officer","Controller","Chief Risk Officer","Supervisory Committee"],
   "Internal Audit & CECL (credit)": ["Chief Audit Executive","Internal Audit","Chief Risk Officer","Chief Credit Officer"],
   "Robotic Process Automation": ["Chief Operating Officer"],
   "Internal Audit — liquidity": ["Treasurer","Chief Financial Officer"],
@@ -395,7 +421,7 @@ const COLDEFS = [
   ["asset_musd","Assets $M",true], ["asset_band","Band",false],
   ["score","Score",true], ["n_signals","#",true], ["signals","Signals",false],
 ];
-const METRICS = [
+const METRICS_BANK = [
   ["EQV","Equity / assets","%",1], ["RBC1AAJ","Tier 1 leverage","%",1],
   ["RBCT1CER","CET1 ratio","%",1], ["ROA","ROA","%",2], ["ROE","ROE","%",1],
   ["NIMY","Net interest margin","%",2], ["EEFFR","Efficiency ratio","%",1],
@@ -403,6 +429,12 @@ const METRICS = [
   ["ELNANTR","Reserve coverage of noncurrent","%",0],
   ["LNLSDEPR","Loan / deposit","%",1], ["brokered_pct","Brokered / deposits","pct",1],
   ["asset_growth_yoy","Asset growth YoY","pct",1],
+];
+const METRICS_CU = [
+  ["NW_RATIO","Net worth ratio","%",2], ["ROA","ROA","%",2],
+  ["DELINQ","Delinquency / loans","%",2], ["NCO","Net charge-offs / loans","%",2],
+  ["LOAN_TO_SHARE","Loan / share","%",1], ["EXP_RATIO","Operating exp / assets","%",2],
+  ["MEMBERS","Members","num",0], ["asset_growth_yoy","Asset growth YoY","pct",1],
 ];
 
 let selected = new Set();
@@ -423,6 +455,8 @@ function passes(r) {
   if (st && r.STALP !== st) return false;
   const bd = document.getElementById("band").value;
   if (bd && r.asset_band !== bd) return false;
+  const it = document.getElementById("itype").value;
+  if (it && r.INST_TYPE !== it) return false;
   const sl = document.getElementById("svcline").value;
   if (sl) {
     const grp = CHIP_GROUPS.find(g=>g[0]===sl);
@@ -450,8 +484,10 @@ function renderTiles(rows) {
   const ge3 = rows.filter(r=>r.n_signals>=3).length;
   const aml = rows.filter(r=>has(r,"bsa_aml_scaling","rapid_growth","growth_accelerating")).length;
   const ten = rows.filter(r=>has(r,"near_10b_threshold","runway_to_10b")).length;
+  const nb = rows.filter(r=>r.INST_TYPE==="Bank").length;
+  const ncu = rows.length - nb;
   const t = [
-    ["Banks in view", rows.length.toLocaleString(), "click to reset all filters", "all"],
+    ["Institutions in view", rows.length.toLocaleString(), `${nb.toLocaleString()} banks · ${ncu.toLocaleString()} credit unions`, "all"],
     ["3+ signals", ge3.toLocaleString(), "stacked RAS opportunities", "ge3"],
     ["AML / growth prospects", aml.toLocaleString(), "BSA/AML + Internal Audit", "aml"],
     ["$10B-tier prospects", ten.toLocaleString(), "Consumer Compliance + IA readiness", "ten"],
@@ -516,10 +552,12 @@ function renderTable(rows) {
     (rows.length>cap?` (top ${cap} by current sort — narrow the filters to see the rest)`:"");
   document.getElementById("tbody").innerHTML = show.map((r,i)=>{
     const tags = sigList(r).map(s=>`<span class="sigtag">${SIGLAB[s]||s}</span>`).join("");
-    const eg = EDGAR[String(r.CERT)];
+    const isCU = r.INST_TYPE==="Credit Union";
+    const eg = isCU ? null : EDGAR[String(r.CERT)];
     const pub = eg ? ` <span class="pub" title="Public — SEC registrant">${eg.ticker||"public"}</span>` : "";
+    const cu = isCU ? ` <span class="cu" title="Credit union (NCUA)">CU</span>` : "";
     return `<tr onclick="expand(${i})" data-i="${i}">`+
-      `<td>${r.NAME||""}${pub}</td><td>${r.STALP||""}</td><td>${r.CITY||""}</td>`+
+      `<td>${r.NAME||""}${cu}${pub}</td><td>${r.STALP||""}</td><td>${r.CITY||""}</td>`+
       `<td class="num">${fmt(r.asset_musd,"num",0)}</td><td>${r.asset_band||""}</td>`+
       `<td class="num">${r.score}</td><td class="num">${r.n_signals}</td>`+
       `<td><div class="sigtags">${tags}</div></td></tr>`;
@@ -560,14 +598,16 @@ function expand(i) {
   document.querySelectorAll("tr.detail").forEach(e=>e.remove());
   if (existing) return;
   const fired = new Set(sigList(r));
+  const isCU = r.INST_TYPE==="Credit Union";
+  const METRICS = isCU ? METRICS_CU : METRICS_BANK;
   const cells = METRICS.map(m=>{
     let cls="mv";
-    if (m[0]==="EQV" && fired.has("excess_capital")) cls="mv gd";
-    if (["NCLNLSR","NPERFV"].includes(m[0]) && fired.has("credit_deterioration")) cls="mv hi";
-    if (m[0]==="EEFFR" && fired.has("weak_efficiency")) cls="mv hi";
+    if (["EQV","NW_RATIO"].includes(m[0]) && fired.has("excess_capital")) cls="mv gd";
+    if (["NCLNLSR","NPERFV","DELINQ","NCO"].includes(m[0]) && fired.has("credit_deterioration")) cls="mv hi";
+    if (["EEFFR","EXP_RATIO"].includes(m[0]) && fired.has("weak_efficiency")) cls="mv hi";
     if (m[0]==="ROA" && fired.has("weak_profitability")) cls="mv lo";
-    if (["LNLSDEPR","brokered_pct"].includes(m[0]) && fired.has("funding_liquidity")) cls="mv hi";
-    if (m[0]==="asset_growth_yoy" && fired.has("rapid_growth")) cls="mv gd";
+    if (["LNLSDEPR","brokered_pct","LOAN_TO_SHARE"].includes(m[0]) && fired.has("funding_liquidity")) cls="mv hi";
+    if (m[0]==="asset_growth_yoy" && (fired.has("rapid_growth")||fired.has("growth_accelerating"))) cls="mv gd";
     return `<div class="metric"><span class="m">${m[1]}</span><span class="${cls}">${fmt(r[m[0]],m[2],m[3])}</span></div>`;
   }).join("");
   // KR RAS service mapping for each fired signal
@@ -577,9 +617,9 @@ function expand(i) {
            `<span class="svc ${refer?"refer":""}">${SIGSERVICE[s]||""}</span></div>`;
   }).join("");
 
-  // 5-year trajectory block (only if history is embedded for this bank)
+  // 5-year trajectory block (banks only; CU history not tracked)
   let trendHtml = "";
-  const sp = SPARK.series[String(r.CERT)];
+  const sp = isCU ? null : SPARK.series[String(r.CERT)];
   if (sp) {
     const specs = [
       ["Equity / assets", sp.eqv, r.EQV_slope, true, "%"],
@@ -611,8 +651,8 @@ function expand(i) {
     `<a class="ldlink" href="${ld.url}" target="_blank" rel="noopener">Find decision-makers at ${r.NAME} on LinkedIn →</a>`+
     `<div class="muted" style="font-size:12px;margin-top:4px">Targets: ${ld.titles.join(" · ")}. Opens a LinkedIn people search — review and connect manually.</div>`;
 
-  // Verified board & executives for public banks (SEC EDGAR)
-  const eg = EDGAR[String(r.CERT)];
+  // Verified board & executives for public banks (SEC EDGAR; banks only)
+  const eg = isCU ? null : EDGAR[String(r.CERT)];
   let egBlock = "";
   if (eg) {
     const ppl = (eg.officers||[]).map(o=>
@@ -636,13 +676,13 @@ function expand(i) {
 function toggle(s){ selected.has(s)?selected.delete(s):selected.add(s); render(); }
 function sortBy(k){ if(sortKey===k) sortDir*=-1; else {sortKey=k; sortDir=(k==="NAME"||k==="CITY"||k==="STALP"||k==="asset_band")?1:-1;} render(); }
 function resetAll(){ selected.clear(); document.getElementById("q").value="";
-  ["state","band","svcline"].forEach(id=>document.getElementById(id).value="");
+  ["state","band","svcline","itype"].forEach(id=>document.getElementById(id).value="");
   document.getElementById("minsig").value="1"; document.getElementById("mode").value="any"; render(); }
 
 function init(){
   document.getElementById("sub").textContent =
-    `${META.flagged.toLocaleString()} banks flagged of the U.S. community-bank universe (under $10B) — FDIC data, ${META.quarter}` +
-    (META.hasTrend ? ", with 5-year trend signals (click a bank for its trajectory)." : ".");
+    `${META.flagged.toLocaleString()} flagged — ${META.nBank.toLocaleString()} community banks (FDIC) + ${META.nCU.toLocaleString()} credit unions (NCUA), ${META.quarter}` +
+    (META.hasTrend ? ". Click any institution for its detail; banks include 5-year trajectory." : ".");
   const states = [...new Set(DATA.map(r=>r.STALP).filter(Boolean))].sort();
   document.getElementById("state").innerHTML =
     '<option value="">All states</option>' + states.map(s=>`<option>${s}</option>`).join("");

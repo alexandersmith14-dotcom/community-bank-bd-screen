@@ -95,11 +95,16 @@ def fetch_all(endpoint, filters, fields):
 def main():
     resolve_dates()
     cap = ASSET_CAP_THOUSANDS
+    # Universe = everything under the asset cap PLUS any bank FDIC officially
+    # flags as a community bank (CB:1), which adds back the ~15 community banks
+    # that are over $10B. The under-cap set still includes non-community
+    # specialty banks, kept as BD "potentials".
+    universe = f"(ASSET:[0 TO {cap}] OR CB:1)"
 
-    print("Fetching active institutions under the asset cap ...")
+    print("Fetching active institutions (under cap OR FDIC community bank) ...")
     inst = fetch_all(
         "institutions",
-        filters=f"ACTIVE:1 AND ASSET:[0 TO {cap}]",
+        filters=f"ACTIVE:1 AND {universe}",
         fields=INST_FIELDS,
     )
     inst.to_csv("data/institutions.csv", index=False)
@@ -108,7 +113,7 @@ def main():
     print("Fetching current-quarter financials ...")
     cur = fetch_all(
         "financials",
-        filters=f"REPDTE:{CURRENT_REPDTE} AND ASSET:[0 TO {cap}]",
+        filters=f"REPDTE:{CURRENT_REPDTE} AND {universe}",
         fields=FIN_FIELDS,
     )
     cur.to_csv("data/fin_current.csv", index=False)
@@ -117,7 +122,7 @@ def main():
     print("Fetching prior-year financials (assets only needed) ...")
     pri = fetch_all(
         "financials",
-        filters=f"REPDTE:{PRIOR_REPDTE} AND ASSET:[0 TO {cap}]",
+        filters=f"REPDTE:{PRIOR_REPDTE} AND {universe}",
         fields=["CERT", "REPDTE", "ASSET"],
     )
     pri.to_csv("data/fin_prior.csv", index=False)

@@ -60,7 +60,7 @@ def fetch_quarter(repdte, cap):
     rows, offset, limit = [], 0, 5000
     while True:
         params = {
-            "filters": f"REPDTE:{repdte} AND ASSET:[0 TO {cap}]",
+            "filters": f"REPDTE:{repdte} AND (ASSET:[0 TO {cap}] OR CB:1)",
             "fields": ",".join(HIST_FIELDS),
             "limit": limit, "offset": offset, "format": "json",
         }

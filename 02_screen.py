@@ -44,8 +44,10 @@ FDICIA_HIGH = 1_150_000   # $1.15B (thousands)
 UNDERRESERVED = 40.0      # allowance < 40% of noncurrent loans
 
 # Asset bands (in $thousands) for peer grouping.
-BAND_EDGES = [0, 250_000, 1_000_000, 3_000_000, 10_000_000 + 1]
-BAND_LABELS = ["<$250M", "$250M-$1B", "$1B-$3B", "$3B-$10B"]
+# Top band is open-ended ("$3B+") so the community banks over $10B still land in
+# a peer group and get percentile-ranked rather than dropped.
+BAND_EDGES = [0, 250_000, 1_000_000, 3_000_000, 10 ** 12]
+BAND_LABELS = ["<$250M", "$250M-$1B", "$1B-$3B", "$3B+"]
 
 # Signal -> (score weight, KR Risk Advisory Services service line).
 # Mapped to Kaufman Rossin RAS's ACTUAL catalog (AML/Sanctions, OFAC, Consumer

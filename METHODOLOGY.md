@@ -16,12 +16,18 @@ like a bank that might need X"; a human decides whether the story actually fits.
 
 | Item | Source |
 |---|---|
-| Universe | FDIC BankFind `institutions`, `ACTIVE:1`, assets < $10B |
+| Universe | FDIC BankFind `institutions`, `ACTIVE:1`, **assets < $10B OR FDIC community-bank flag (`CB:1`)** |
 | Financial ratios | FDIC BankFind `financials`, latest quarter |
 | Year-over-year growth | Same, prior-year quarter |
 
-Report date is pinned at the top of `01_fetch.py` and updated each quarter.
-All dollar figures from FDIC are in **thousands**.
+**Universe definition.** Every active FDIC-insured institution under $10B in
+assets, *plus* the ~15 banks FDIC officially flags as community banks (`CB:1`)
+that are over $10B — so large community banks aren't dropped on a size technicality.
+The under-$10B set deliberately keeps the ~283 non-community "specialty" banks
+(credit-card banks, industrial loan cos, trust banks) as BD *potentials* rather
+than filtering them out. This is a superset of FDIC's official community-bank
+population by design. Scope excludes **credit unions** (NCUA-insured, a separate
+dataset). Report date auto-detects the latest quarter; FDIC dollars are in **thousands**.
 
 ## Peer grouping
 
@@ -29,7 +35,7 @@ All dollar figures from FDIC are in **thousands**.
 ordinary for a $150M bank and remarkable for a $9B one. So every relative signal
 uses a **within-band percentile**. Bands:
 
-- `<$250M`, `$250M–$1B`, `$1B–$3B`, `$3B–$10B`
+- `<$250M`, `$250M–$1B`, `$1B–$3B`, `$3B+` (the top band is open-ended so the >$10B community banks are ranked, not dropped)
 
 A bank at the 90th percentile for equity/assets is in the top 10% *of banks its
 own size*.

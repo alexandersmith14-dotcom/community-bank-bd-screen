@@ -25,7 +25,9 @@ jobs:
       - run: python 04_history.py     # 20 quarters of history
       - run: python 05_trajectory.py  # trend features -> enriched targets.csv
       - run: python 06_edgar.py       # SEC EDGAR officers for public banks
-      - run: python 03_dashboard.py   # dashboard (snapshot + trajectory + officers)
+      - run: python 07_cu_fetch.py    # NCUA credit-union data
+      - run: python 08_cu_screen.py   # credit-union RAS targets
+      - run: python 03_dashboard.py   # dashboard (banks + credit unions)
       - run: cp output/dashboard.html docs/index.html
       - name: Commit if the dashboard changed
         run: |
