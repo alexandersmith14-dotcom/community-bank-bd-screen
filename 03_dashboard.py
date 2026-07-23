@@ -768,8 +768,9 @@ function renderOverview(){
       `<td class="num gd">${hot.toLocaleString()}</td><td class="num">${warm.toLocaleString()}</td></tr>`;
   }).join("");
   const typeTbl = `<table style="width:auto"><thead><tr><th>Type</th><th class="num">Total</th><th class="num">Hot</th><th class="num">Warm</th></tr></thead><tbody>${rowsT}</tbody></table>`;
-  // top states
-  const sc={}; D.forEach(r=>{ if(r.STALP) sc[r.STALP]=(sc[r.STALP]||0)+1; });
+  // top states (banks + credit unions only — fintech "state" is registration
+  // domicile, not a sales territory)
+  const sc={}; D.forEach(r=>{ if(r.STALP && r.INST_TYPE!=="Fintech") sc[r.STALP]=(sc[r.STALP]||0)+1; });
   const top=Object.entries(sc).sort((a,b)=>b[1]-a[1]).slice(0,12);
   const mx=Math.max(...top.map(x=>x[1]),1);
   const stateBars=top.map(([s,c])=>`<div class="barrow"><div class="lab">${s}</div>`+
@@ -782,7 +783,7 @@ function renderOverview(){
   document.getElementById("overview").innerHTML =
     `<div class="ovgrid">`+
     `<div><div class="ovh">By type &amp; priority</div>${typeTbl}</div>`+
-    `<div><div class="ovh">Targets by state (top 12)</div>${stateBars}</div>`+
+    `<div><div class="ovh">Targets by state — banks &amp; CUs (top 12)</div>${stateBars}</div>`+
     `<div><div class="ovh">Demand by KR RAS service line</div>${grpBars}</div></div>`;
 }
 
