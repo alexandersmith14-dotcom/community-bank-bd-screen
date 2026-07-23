@@ -43,17 +43,26 @@ the question is "compared to similar banks"; absolute where a regulatory or
 structural line matters. Thresholds live at the top of `02_screen.py` and are
 meant to be tuned.
 
-| Signal | Rule (default) | FDIC fields | Maps to |
+Service lines are mapped to **Kaufman Rossin Risk Advisory Services (RAS)**'s
+actual catalog — AML & Sanctions, OFAC, Consumer Compliance, FINRA/SEC, Internal
+Audit, Cybersecurity/DFIR, Robotic Process Automation, and the Risk Intelligence
+Suite. Weights favor genuinely RAS-sellable signals; signals that belong to a
+*different* KR practice are kept visible but scored low and tagged **Refer**.
+
+| Signal | Rule (default) | FDIC fields | KR RAS service (weight) |
 |---|---|---|---|
-| **Excess capital** | equity/assets in top 20% of peer band | `EQV` | Capital deployment, M&A readiness, capital planning |
-| **Credit deterioration** | net charge-offs *or* noncurrent assets in worst 15% of band | `NCLNLSR`, `NPERFV` | Credit risk review, ALLL/CECL validation, loan review |
-| **Under-reserved** *(intensifier)* | deterioration **and** allowance < 40% of noncurrent loans | `ELNANTR` | ALLL/CECL model validation, reserve adequacy |
-| **Weak efficiency** | efficiency ratio ≥ 70% **and** top 20% of band | `EEFFR` | Process improvement, outsourced internal audit, cost transformation |
-| **Funding / liquidity** | loan-to-deposit ≥ 100% *or* worst 15% of band *or* brokered deposits ≥ 10% of deposits | `LNLSDEPR`, `BRO`, `DEP` | Liquidity risk management, funding & IRR advisory |
-| **Rapid growth** | assets up ≥ 15% year over year | `ASSET` (YoY) | Growth-tier readiness, risk-infrastructure scaling |
-| **Near $10B threshold** | assets between $8B and $10B | `ASSET` | $10B readiness: Durbin, CFPB supervision, DFAST |
-| **Weak profitability** | ROA in bottom 15% of band *or* negative | `ROA` | Earnings improvement, margin & balance-sheet advisory |
-| **BSA/AML scaling** *(proxy)* | assets up ≥ 20% YoY | `ASSET` (YoY) | BSA/AML program enhancement, independent testing |
+| **Near $10B threshold** | assets between $8B and $10B | `ASSET` | $10B readiness — Consumer Compliance (CFPB), expanded BSA/AML, Internal Audit build-out (22) |
+| **BSA/AML scaling** *(proxy)* | assets up ≥ 20% YoY | `ASSET` (YoY) | BSA/AML program enhancement + independent testing, OFAC (20) |
+| **Rapid growth** | assets up ≥ 15% YoY | `ASSET` (YoY) | BSA/AML scaling, Internal Audit, enterprise risk assessment (18) |
+| **Credit deterioration** | net charge-offs *or* noncurrent in worst 15% of band | `NCLNLSR`, `NPERFV` | Internal Audit loan review + ALLL/CECL governance (18) |
+| **Weak efficiency** | efficiency ratio ≥ 70% **and** top 20% of band | `EEFFR` | Robotic Process Automation (RPA) + Internal Audit process review (15) |
+| **Under-reserved** *(intensifier)* | deterioration **and** allowance < 40% of noncurrent | `ELNANTR` | ALLL/CECL reserve governance review — Internal Audit (10) |
+| **Funding / liquidity** | loan/deposit ≥ 100% *or* worst 15% *or* brokered ≥ 10% of deposits | `LNLSDEPR`, `BRO`, `DEP` | *(partial)* Internal Audit of liquidity/funding controls; ALM advisory is another practice (10) |
+| **Excess capital** | equity/assets in top 20% of peer band | `EQV` | *Refer* — capital deployment / M&A (other KR practice); RAS angle = M&A compliance due diligence (5) |
+| **Weak profitability** | ROA in bottom 15% of band *or* negative | `ROA` | *Refer* — earnings / margin advisory (other KR practice); RAS angle = RPA cost automation (5) |
+
+A standing cross-sell that isn't signal-derived: **Cybersecurity / Digital
+Forensics & Incident Response** applies to essentially every institution.
 
 **Scoring.** Each matched signal carries a weight (see `SERVICE` in
 `02_screen.py`); a bank's `score` is the sum, and `n_signals` is the count.
@@ -76,13 +85,13 @@ be flagged by a level, a trend, or both, and the combination is the point:
 "over-capitalized **and** still building capital" is a warmer call than either
 alone. Trend flags need ≥ 6 quarters of data.
 
-| Trajectory signal | Rule (default) | Maps to |
+| Trajectory signal | Rule (default) | KR RAS service (weight) |
 |---|---|---|
-| **Capital building** | equity/assets rising ≥ 0.40 pts/yr **and** +0.75 pts over 2yr | Capital deployment (accumulating), M&A readiness |
-| **Credit turning** | charge-offs *or* noncurrent rising ≥ 0.15 pts/yr | Early credit review, CECL sensitivity |
-| **Growth accelerating** | assets ≥ 10% YoY **and** ≥ 3 pts faster than the prior year | Scaling risk infrastructure, growth-tier prep |
-| **Runway to $10B** | ≥ $5B now **and** projected to cross $10B within 12 quarters at current pace | $10B runway planning: Durbin, CFPB, DFAST |
-| **Margin eroding** | ROA falling ≤ −0.10 pts/yr **and** efficiency ratio rising ≥ 2.5 pts/yr | Earnings / margin turnaround advisory |
+| **Runway to $10B** | ≥ $5B now **and** projected to cross $10B within 12 quarters | $10B runway — Consumer Compliance (CFPB), BSA/AML, Internal Audit readiness (20) |
+| **Growth accelerating** | assets ≥ 10% YoY **and** ≥ 3 pts faster than the prior year | BSA/AML scaling + Internal Audit as growth outpaces controls (16) |
+| **Credit turning** | charge-offs *or* noncurrent rising ≥ 0.15 pts/yr | Early Internal Audit loan review / credit-risk controls (16) |
+| **Margin eroding** | ROA falling ≤ −0.10 pts/yr **and** efficiency rising ≥ 2.5 pts/yr | *(partial)* RPA cost automation; broader margin advisory is another practice (10) |
+| **Capital building** | equity/assets rising ≥ 0.40 pts/yr **and** +0.75 pts over 2yr | *Refer* — capital deployment / M&A (other KR practice) (5) |
 
 Trajectory flags add to a bank's score and count alongside the snapshot signals.
 The dashboard shows each flagged bank's equity/assets, ROA, assets, and

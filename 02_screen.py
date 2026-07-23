@@ -43,17 +43,24 @@ UNDERRESERVED = 40.0      # allowance < 40% of noncurrent loans
 BAND_EDGES = [0, 250_000, 1_000_000, 3_000_000, 10_000_000 + 1]
 BAND_LABELS = ["<$250M", "$250M-$1B", "$1B-$3B", "$3B-$10B"]
 
-# Signal -> (score weight, advisory service line)
+# Signal -> (score weight, KR Risk Advisory Services service line).
+# Mapped to Kaufman Rossin RAS's ACTUAL catalog (AML/Sanctions, OFAC, Consumer
+# Compliance, FINRA/SEC, Internal Audit, Cybersecurity, RPA, Risk Intelligence
+# Suite). Weights favor genuine RAS-sellable signals; signals that belong to a
+# different KR practice are kept visible but scored low and tagged "Refer".
 SERVICE = {
-    "excess_capital":      (20, "Capital deployment / M&A readiness / capital planning"),
-    "credit_deterioration": (25, "Credit risk review / ALLL-CECL validation / loan review"),
-    "under_reserved":      (10, "ALLL-CECL model validation / reserve adequacy review"),
-    "weak_efficiency":     (15, "Process improvement / outsourced internal audit / cost transformation"),
-    "funding_liquidity":   (20, "Liquidity risk management / funding & IRR advisory"),
-    "rapid_growth":        (15, "Growth-tier readiness / risk infrastructure scaling"),
-    "near_10b_threshold":  (20, "$10B readiness: Durbin, CFPB supervision, DFAST"),
-    "weak_profitability":  (20, "Earnings improvement / margin & balance-sheet advisory"),
-    "bsa_aml_scaling":     (10, "BSA/AML program enhancement / independent testing"),
+    # --- Strong KR RAS fits ---------------------------------------------
+    "near_10b_threshold":   (22, "KR RAS: $10B readiness — Consumer Compliance (CFPB), expanded BSA/AML, Internal Audit build-out"),
+    "bsa_aml_scaling":      (20, "KR RAS: BSA/AML program enhancement + independent testing (AML & Sanctions / OFAC)"),
+    "rapid_growth":         (18, "KR RAS: BSA/AML scaling, Internal Audit, enterprise risk assessment (Risk Intelligence Suite)"),
+    "credit_deterioration": (18, "KR RAS: Internal Audit loan review + ALLL/CECL governance review"),
+    "weak_efficiency":      (15, "KR RAS: Robotic Process Automation (RPA) + Internal Audit process review"),
+    "under_reserved":       (10, "KR RAS: ALLL/CECL reserve governance review (Internal Audit)"),
+    # --- Partial fit ----------------------------------------------------
+    "funding_liquidity":    (10, "KR RAS (partial): Internal Audit of liquidity/funding risk controls; ALM advisory is another practice"),
+    # --- Not RAS: surface but refer to another KR practice --------------
+    "excess_capital":       (5,  "Refer: capital deployment / M&A (other KR practice); RAS angle = M&A compliance due diligence"),
+    "weak_profitability":   (5,  "Refer: earnings / margin advisory (other KR practice); RAS angle = cost automation via RPA"),
 }
 
 

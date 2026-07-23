@@ -34,13 +34,15 @@ TEN_B = 10_000_000     # $10B in thousands
 
 SERIES = ["ASSET", "EQV", "RBC1AAJ", "NCLNLSR", "NPERFV", "EEFFR", "ROA", "LNLSDEPR"]
 
-# trajectory signal -> (score weight, service line)
+# trajectory signal -> (score weight, KR RAS service line). Same calibration as
+# the snapshot map in 02_screen.py: RAS-sellable signals weighted up; non-RAS
+# tagged "Refer".
 TSERVICE = {
-    "capital_building":     (12, "Capital deployment (accumulating) / M&A readiness"),
-    "credit_turning":       (18, "Early credit review / CECL sensitivity"),
-    "growth_accelerating":  (12, "Scaling risk infrastructure / growth-tier prep"),
-    "runway_to_10b":        (18, "$10B runway planning: Durbin, CFPB, DFAST"),
-    "margin_eroding":       (14, "Earnings / margin turnaround advisory"),
+    "runway_to_10b":        (20, "KR RAS: $10B runway — Consumer Compliance (CFPB), BSA/AML, Internal Audit readiness"),
+    "growth_accelerating":  (16, "KR RAS: BSA/AML scaling, Internal Audit, risk assessment as growth outpaces controls"),
+    "credit_turning":       (16, "KR RAS: early Internal Audit loan review / credit-risk controls before losses surface"),
+    "margin_eroding":       (10, "KR RAS (partial): RPA cost automation; broader margin advisory is another practice"),
+    "capital_building":     (5,  "Refer: capital deployment / M&A (other KR practice)"),
 }
 
 

@@ -159,6 +159,10 @@ TEMPLATE = r"""<!doctype html>
   .chip.trend.on { border-style:solid; }
   .detail td { background:var(--page); }
   .detail-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:10px 20px; padding:6px 2px; }
+  .svcmap { display:flex; flex-direction:column; gap:5px; padding:2px; }
+  .svcrow { display:grid; grid-template-columns:150px 1fr; align-items:center; gap:10px; }
+  .svc { font-size:12.5px; color:var(--text-primary); }
+  .svc.refer { color:var(--muted); font-style:italic; }
   .trendhdr { margin:14px 2px 8px; font-size:13px; font-weight:600; }
   .trendhdr .muted { font-weight:400; }
   .muted { color:var(--muted); }
@@ -262,6 +266,24 @@ const SIGNALS = [
 ];
 const SIGLAB = Object.fromEntries(SIGNALS.map(s => [s[0], s[1]]));
 
+// Signal -> KR Risk Advisory Services line (kept in step with the Python maps).
+const SIGSERVICE = {
+  near_10b_threshold:  "$10B readiness — Consumer Compliance (CFPB), BSA/AML, Internal Audit",
+  runway_to_10b:       "$10B runway — Consumer Compliance, BSA/AML, Internal Audit readiness",
+  bsa_aml_scaling:     "BSA/AML program enhancement + independent testing",
+  rapid_growth:        "BSA/AML scaling, Internal Audit, enterprise risk assessment",
+  growth_accelerating: "BSA/AML scaling + Internal Audit as growth outpaces controls",
+  credit_deterioration:"Internal Audit loan review + ALLL/CECL governance",
+  credit_turning:      "Early Internal Audit loan review / credit-risk controls",
+  weak_efficiency:     "Robotic Process Automation (RPA) + Internal Audit process review",
+  under_reserved:      "ALLL/CECL reserve governance review (Internal Audit)",
+  funding_liquidity:   "Internal Audit of liquidity/funding risk controls (partial)",
+  margin_eroding:      "RPA cost automation (partial)",
+  excess_capital:      "Refer — capital deployment / M&A (other KR practice)",
+  capital_building:    "Refer — capital deployment / M&A (other KR practice)",
+  weak_profitability:  "Refer — earnings / margin advisory (other KR practice)",
+};
+
 const COLDEFS = [
   ["NAME","Bank",false], ["STALP","St",false], ["CITY","City",false],
   ["asset_musd","Assets $M",true], ["asset_band","Band",false],
@@ -313,14 +335,15 @@ function render() {
 }
 
 function renderTiles(rows) {
+  const has = (r,...ks)=>ks.some(k=>sigList(r).includes(k));
   const ge3 = rows.filter(r=>r.n_signals>=3).length;
-  const near = rows.filter(r=>sigList(r).includes("near_10b_threshold")).length;
-  const cap  = rows.filter(r=>sigList(r).includes("excess_capital")).length;
+  const aml = rows.filter(r=>has(r,"bsa_aml_scaling","rapid_growth","growth_accelerating")).length;
+  const ten = rows.filter(r=>has(r,"near_10b_threshold","runway_to_10b")).length;
   const t = [
     ["Banks in view", rows.length.toLocaleString(), "match current filters"],
-    ["3+ signals", ge3.toLocaleString(), "stacked opportunities"],
-    ["Excess capital", cap.toLocaleString(), "deployment / M&A conversations"],
-    ["Approaching $10B", near.toLocaleString(), "$8B–$10B, tier-readiness"],
+    ["3+ signals", ge3.toLocaleString(), "stacked RAS opportunities"],
+    ["AML / growth prospects", aml.toLocaleString(), "BSA/AML + Internal Audit"],
+    ["$10B-tier prospects", ten.toLocaleString(), "Consumer Compliance + IA readiness"],
   ];
   document.getElementById("tiles").innerHTML = t.map(x=>
     `<div class="tile"><div class="k">${x[0]}</div><div class="v">${x[1]}</div><div class="s">${x[2]}</div></div>`).join("");
@@ -419,7 +442,12 @@ function expand(i) {
     if (m[0]==="asset_growth_yoy" && fired.has("rapid_growth")) cls="mv gd";
     return `<div class="metric"><span class="m">${m[1]}</span><span class="${cls}">${fmt(r[m[0]],m[2],m[3])}</span></div>`;
   }).join("");
-  const svc = sigList(r).map(s=>SIGLAB[s]).join(" · ");
+  // KR RAS service mapping for each fired signal
+  const svcRows = sigList(r).map(s=>{
+    const refer = (SIGSERVICE[s]||"").startsWith("Refer");
+    return `<div class="svcrow"><span class="sigtag">${SIGLAB[s]||s}</span>`+
+           `<span class="svc ${refer?"refer":""}">${SIGSERVICE[s]||""}</span></div>`;
+  }).join("");
 
   // 5-year trajectory block (only if history is embedded for this bank)
   let trendHtml = "";
@@ -450,8 +478,9 @@ function expand(i) {
   const tr = document.createElement("tr");
   tr.className="detail"; tr.dataset.for=i;
   tr.innerHTML = `<td colspan="8"><div style="padding:4px 2px 10px">`+
-    `<div style="color:var(--text-secondary);margin-bottom:8px">FDIC CERT ${r.CERT} &nbsp;•&nbsp; flagged: ${svc}</div>`+
-    `<div class="detail-grid">${cells}</div>${trendHtml}</div></td>`;
+    `<div style="color:var(--text-secondary);margin-bottom:8px">FDIC CERT ${r.CERT}</div>`+
+    `<div class="trendhdr">KR RAS services to pitch</div><div class="svcmap">${svcRows}</div>`+
+    `<div class="trendhdr">Financials</div><div class="detail-grid">${cells}</div>${trendHtml}</div></td>`;
   const rowEl = document.querySelector(`tr[data-i="${i}"]`);
   rowEl.after(tr);
 }
