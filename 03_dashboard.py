@@ -264,8 +264,8 @@ TEMPLATE = r"""<!doctype html>
     <h2>Filters &nbsp; <a class="reset" onclick="resetAll()">reset</a></h2>
     <div class="filters">
       <div class="field">
-        <label>Search name / city</label>
-        <input type="text" id="q" placeholder="e.g. Republic, Miami" oninput="render()">
+        <label>Search</label>
+        <input type="text" id="q" placeholder="name, city, state, signal…" oninput="render()">
       </div>
       <div class="field">
         <label>Institution type</label>
@@ -508,7 +508,11 @@ function sigList(r){ return r.signals ? r.signals.split("; ") : []; }
 
 function passes(r) {
   const q = document.getElementById("q").value.trim().toLowerCase();
-  if (q && !((r.NAME||"").toLowerCase().includes(q) || (r.CITY||"").toLowerCase().includes(q))) return false;
+  if (q) {
+    const hay = [r.NAME, r.CITY, r.STALP, r.INST_TYPE, r.FT_DBA, r.FT_ACTIVITIES,
+      sigList(r).map(s=>SIGLAB[s]||s).join(" ")].filter(Boolean).join(" ").toLowerCase();
+    if (!q.split(/\s+/).every(t=>hay.includes(t))) return false;
+  }
   const st = document.getElementById("state").value;
   if (st && r.STALP !== st) return false;
   if (bandSel.size && !bandSel.has(r.asset_band)) return false;
