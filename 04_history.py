@@ -29,6 +29,8 @@ HIST_FIELDS = [
     "ROA",
     "LNLSDEPR",  # loan / deposit
     "BRO", "DEP",
+    # CRE components — for the 36-month NOO CRE growth leg of the guidance test
+    "LNRECONS", "LNREMULT", "LNRENROT",
 ]
 
 

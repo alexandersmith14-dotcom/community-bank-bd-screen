@@ -24,11 +24,12 @@ COLS = [
     "score", "signals", "EQV", "EQV_pct", "RBC1AAJ", "RBCT1CER", "ROA",
     "ROA_pct", "ROE", "NIMY", "EEFFR", "EEFFR_pct", "NCLNLSR", "NPERFV",
     "ELNANTR", "LNLSDEPR", "brokered_pct", "asset_growth_yoy",
+    "cre_ratio", "cd_ratio", "cre_breach_loss_pct",
 ]
 # Trajectory columns present only when 05_trajectory.py has run; embedded when found.
 TRAJ_COLS = [
     "EQV_slope", "EQV_d2y", "ROA_slope", "asset_yoy", "asset_accel",
-    "runway_q", "n_quarters",
+    "runway_q", "n_quarters", "cre_g36",
 ]
 # Credit-union financial columns (present only when 08_cu_screen.py has run).
 CU_COLS = [
@@ -331,6 +332,10 @@ const CU_SPARK = /*__CU_SPARK__*/;
 
 const SIGNALS = [
   ["pre_enforcement","Pre-enforcement profile ⚠","flagship"],
+  ["thin_cre_cushion","Thin CRE cushion ⚠","flagship"],
+  ["cre_concentration","CRE ≥300% of capital","snapshot"],
+  ["cd_concentration","C&D ≥100% of capital","snapshot"],
+  ["cre_growth_36m","CRE +50% in 36mo ↗","trend"],
   ["excess_capital","Excess capital","snapshot"],
   ["credit_deterioration","Credit deterioration","snapshot"],
   ["under_reserved","Under-reserved","snapshot"],
@@ -361,6 +366,10 @@ const SIGLAB = Object.fromEntries(SIGNALS.map(s => [s[0], s[1]]));
 // Signal -> KR Risk Advisory Services line (kept in step with the Python maps).
 const SIGSERVICE = {
   pre_enforcement:     "Pre-enforcement readiness — risk assessment, Internal Audit, BSA/AML & remediation readiness before regulators act",
+  thin_cre_cushion:    "CRE stress testing + capital planning — a modest CRE loss would breach well-capitalized (reverse stress test)",
+  cre_concentration:   "CRE loan review, credit risk review, CECL/ALLL, CRE stress testing (supervisory concentration criteria)",
+  cd_concentration:    "Construction & development loan review + credit risk management (supervisory concentration criteria)",
+  cre_growth_36m:      "CRE loan review + stress testing — rapid CRE growth (second leg of the supervisory concentration criteria)",
   near_10b_threshold:  "$10B readiness — Consumer Compliance (CFPB), Durbin, BSA/AML, Internal Audit, DFAST (banks) / NCUA stress testing (CUs)",
   runway_to_10b:       "$10B runway — Consumer Compliance, Durbin, BSA/AML, Internal Audit, DFAST",
   near_fdicia_1b:      "FDICIA Part 363 annual independent audit + audit-committee independence (crossing $1B, 2026 threshold)",
@@ -388,6 +397,7 @@ const SIGSERVICE = {
 // Signal pills grouped under the KR RAS service line they feed.
 const CHIP_GROUPS = [
   ["⚠ Pre-enforcement risk (flagship)", ["pre_enforcement"]],
+  ["CRE concentration & stress testing", ["thin_cre_cushion","cre_concentration","cd_concentration","cre_growth_36m"]],
   ["BSA/AML & Sanctions", ["bsa_aml_scaling","rapid_growth","growth_accelerating"]],
   ["FDICIA / audit / $10B readiness", ["near_fdicia_1b","near_fdicia_5b","near_500m_audit","near_10b_threshold","runway_to_10b"]],
   ["Internal Audit & CECL (credit)", ["credit_deterioration","under_reserved","credit_turning"]],
@@ -399,6 +409,10 @@ const CHIP_GROUPS = [
 
 // Plain-language criteria shown on hover.
 const DESC = {
+  thin_cre_cushion: "Reverse stress test: the bank's capital cushion above well-capitalized would be wiped out by a CRE loss of 10% or less.",
+  cre_concentration: "CRE (construction + multifamily + non-owner-occupied) is 300%+ of total risk-based capital — the supervisory concentration criteria.",
+  cd_concentration: "Construction & development loans are 100%+ of total risk-based capital — the supervisory concentration criteria.",
+  cre_growth_36m: "Non-owner-occupied CRE grew 50%+ over the last 36 months — the growth leg of the CRE concentration guidance.",
   pre_enforcement: "Financials match banks in the year before an OCC/Fed enforcement order — weak earnings + high cost + weak asset quality + brokered funding (3+ of 4). See study/FINDINGS.md.",
   excess_capital: "Equity/assets in the top 20% of its size peer group — well-capitalized, with a deployment question.",
   credit_deterioration: "Net charge-offs or noncurrent assets in the worst 15% of size peers.",
@@ -424,6 +438,7 @@ const DESC = {
   ft_fx_crypto: "Currency dealer / FX — often crypto or cross-border; heavy BSA/AML and sanctions exposure.",
 };
 const GROUP_DESC = {
+  "CRE concentration & stress testing": "KR RAS: CRE loan review, credit risk review, CECL/ALLL, and CRE stress testing / capital planning — driven by the interagency CRE concentration criteria and a reverse stress test on public data.",
   "⚠ Pre-enforcement risk (flagship)": "KR RAS: banks whose financials match the empirical pattern ~1 year before an OCC/Fed enforcement order — a warm, specific reason to get ahead of it (risk assessment, Internal Audit, BSA/AML, remediation readiness).",
   "BSA/AML & Sanctions": "KR RAS: BSA/AML program build & independent testing, OFAC/sanctions.",
   "FDICIA / audit / $10B readiness": "KR RAS: FDICIA ICFR (banks) & NCUA $500M CPA audit (credit unions); $10B-tier readiness (CFPB, stress testing).",
@@ -444,6 +459,7 @@ function esc(s){ return String(s).replace(/"/g,"&quot;"); }
 // Decision-maker titles to target on LinkedIn, by service-line group.
 const LD_TITLES = {
   "⚠ Pre-enforcement risk (flagship)": ["Chief Executive Officer","Chief Financial Officer","Chief Risk Officer","Chief Audit Executive","BSA Officer"],
+  "CRE concentration & stress testing": ["Chief Credit Officer","Chief Risk Officer","Chief Financial Officer","Chief Lending Officer","Chief Executive Officer"],
   "BSA/AML & Sanctions": ["BSA Officer","Chief Compliance Officer","AML"],
   "FDICIA / audit / $10B readiness": ["Chief Financial Officer","Controller","Chief Risk Officer","Supervisory Committee"],
   "Internal Audit & CECL (credit)": ["Chief Audit Executive","Internal Audit","Chief Risk Officer","Chief Credit Officer"],
@@ -481,6 +497,10 @@ const METRICS_BANK = [
   ["ELNANTR","Reserve coverage of noncurrent","%",0],
   ["LNLSDEPR","Loan / deposit","%",1], ["brokered_pct","Brokered / deposits","pct",1],
   ["asset_growth_yoy","Asset growth YoY","pct",1],
+  ["cre_ratio","CRE / total risk-based capital","%",0],
+  ["cd_ratio","Construction&dev / capital","%",0],
+  ["cre_g36","NOO CRE growth, 36 mo","pct",0],
+  ["cre_breach_loss_pct","CRE loss to breach well-cap","%",1],
 ];
 const METRICS_CU = [
   ["NW_RATIO","Net worth ratio","%",2], ["ROA","ROA","%",2],

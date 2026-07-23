@@ -57,6 +57,10 @@ Suite. Weights favor genuinely RAS-sellable signals; signals that belong to a
 
 | Signal | Rule (default) | FDIC fields | KR RAS service (weight) |
 |---|---|---|---|
+| **⚠ Thin CRE cushion** *(reverse stress)* | capital above well-capitalized (total RBC ≥10% of RWA) would be wiped out by a CRE loss ≤10% | `RBCT1J`,`RBCT2`,`RWAJT`,CRE | CRE stress testing + capital planning (22) |
+| **CRE ≥300% of capital** | (construction + multifamily + **non-owner-occupied** nonfarm nonres) ÷ total risk-based capital ≥300% | `LNRECONS`,`LNREMULT`,`LNRENROT` | CRE loan review, credit risk review, CECL/ALLL, stress testing (20) |
+| **C&D ≥100% of capital** | construction & development ÷ total risk-based capital ≥100% | `LNRECONS` | C&D loan review + credit risk management (20) |
+| **CRE +50% in 36mo** *(trend)* | NOO CRE grew ≥50% over 12 quarters — the growth leg of the guidance | history | CRE loan review + stress testing (18) |
 | **⚠ Pre-enforcement profile** *(flagship)* | matches ≥3 of 4: ROA bottom quartile, efficiency worst quartile, noncurrent/charge-offs worst quartile, brokered ≥10% of deposits | `ROA`,`EEFFR`,`NPERFV`,`NCLNLSR`,`BRO` | Pre-enforcement readiness — risk assessment, Internal Audit, BSA/AML, remediation (24) |
 | **Near $10B threshold** | assets between $8B and $10B | `ASSET` | $10B readiness — Consumer Compliance (CFPB), BSA/AML, Internal Audit; FDICIA ICFR attestation (22) |
 | **BSA/AML scaling** *(proxy)* | assets up ≥ 20% YoY | `ASSET` (YoY) | BSA/AML program enhancement + independent testing, OFAC (20) |

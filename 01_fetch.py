@@ -65,6 +65,14 @@ FIN_FIELDS = [
     "LNLSNTV",    # net loans & leases to assets (%)
     "LNLSDEPR",   # net loans & leases to deposits (%)
     "BRO",        # brokered deposits ($000s)
+    # CRE concentration (interagency guidance) + capital for the ratios / stress test
+    "LNRECONS",   # construction & land development ($000s)
+    "LNREMULT",   # multifamily ($000s)
+    "LNRENROT",   # nonfarm nonresidential, NON-owner-occupied ($000s)
+    "LNRENROW",   # nonfarm nonresidential, owner-occupied (excluded from guidance)
+    "RBCT1J",     # tier 1 capital ($000s)
+    "RBCT2",      # tier 2 capital ($000s)
+    "RWAJT",      # total risk-weighted assets ($000s)
 ]
 
 

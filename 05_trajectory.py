@@ -34,6 +34,11 @@ TEN_B = 10_000_000     # $10B in thousands
 
 SERIES = ["ASSET", "EQV", "RBC1AAJ", "NCLNLSR", "NPERFV", "EEFFR", "ROA", "LNLSDEPR"]
 
+# Interagency CRE guidance: the 300%-of-capital test also requires the CRE book
+# to have grown >= 50% over the prior 36 months (12 quarters). NOO CRE =
+# construction/land development + multifamily + non-owner-occupied nonfarm nonres.
+CRE_GROWTH_36M = 0.50
+
 # trajectory signal -> (score weight, KR RAS service line). Same calibration as
 # the snapshot map in 02_screen.py: RAS-sellable signals weighted up; non-RAS
 # tagged "Refer".
@@ -41,6 +46,7 @@ TSERVICE = {
     "runway_to_10b":        (20, "KR RAS: $10B runway — Consumer Compliance (CFPB), Durbin, BSA/AML, Internal Audit, DFAST"),
     "growth_accelerating":  (16, "KR RAS: BSA/AML scaling, Internal Audit, risk assessment; FDICIA Part 363 audit if crossing $1B, ICFR if crossing $5B"),
     "credit_turning":       (16, "KR RAS: early Internal Audit loan review + CECL model validation before losses surface"),
+    "cre_growth_36m":       (18, "KR RAS: CRE loan review + stress testing — NOO CRE up >=50% in 36 months (second leg of the supervisory concentration criteria)"),
     "margin_eroding":       (10, "KR RAS (partial): RPA cost automation; broader margin advisory is another practice"),
     "capital_building":     (5,  "Refer: capital deployment / M&A (other KR practice)"),
 }
@@ -109,6 +115,18 @@ def main():
             rec["runway_q"] = np.nan
         rec["cur_asset"] = float(cur) if cur == cur else np.nan
         rec["n_quarters"] = int(g["ASSET"].notna().sum())
+
+        # 36-month NOO CRE growth (12 quarters) — second leg of the CRE guidance
+        if all(c in g.columns for c in ("LNRECONS", "LNREMULT", "LNRENROT")):
+            cre = (g["LNRECONS"].fillna(0) + g["LNREMULT"].fillna(0) + g["LNRENROT"].fillna(0))
+            cre = cre.where(cre > 0)
+            if cre.notna().sum() >= 13 and pd.notnull(cre.iloc[-1]) and pd.notnull(cre.iloc[-13]) \
+               and cre.iloc[-13] > 0:
+                rec["cre_g36"] = float(cre.iloc[-1] / cre.iloc[-13] - 1)
+            else:
+                rec["cre_g36"] = np.nan
+        else:
+            rec["cre_g36"] = np.nan
         feats.append(rec)
 
         # sparkline series (rounded, nulls preserved), only a few metrics
@@ -129,6 +147,7 @@ def main():
     tf["growth_accelerating"] = (tf["asset_yoy"] >= GROWTH_RECENT) & (tf["asset_accel"] >= GROWTH_ACCEL)
     tf["runway_to_10b"] = (tf["cur_asset"] >= RUNWAY_MIN_ASSET) & (tf["runway_q"] <= RUNWAY_QUARTERS)
     tf["margin_eroding"] = (tf["ROA_slope"] <= ROA_SLOPE) & (tf["EEFFR_slope"] >= EFF_SLOPE)
+    tf["cre_growth_36m"] = tf["cre_g36"] >= CRE_GROWTH_36M
     for k in TSERVICE:
         tf[k] = tf[k].fillna(False).astype(bool)
 
@@ -161,7 +180,7 @@ def main():
 
     keep = [c for c in allb.columns] + tcols + [
         "EQV_slope", "EQV_d2y", "ROA_slope", "NCLNLSR_slope", "NPERFV_slope",
-        "asset_yoy", "asset_accel", "runway_q", "n_quarters",
+        "asset_yoy", "asset_accel", "runway_q", "n_quarters", "cre_g36",
     ]
     out = m[m["n_signals"] > 0][keep].sort_values(
         ["score", "n_signals", "asset_musd"], ascending=False

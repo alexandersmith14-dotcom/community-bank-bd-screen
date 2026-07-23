@@ -44,6 +44,19 @@ FDICIA_1B_LOW = 850_000     # approaching/crossing $1B (thousands)
 FDICIA_1B_HIGH = 1_150_000
 FDICIA_5B_LOW = 4_250_000   # approaching/crossing $5B (thousands)
 FDICIA_5B_HIGH = 5_500_000
+
+# Interagency CRE concentration guidance supervisory criteria:
+#   (1) construction & development >= 100% of total risk-based capital, or
+#   (2) total CRE >= 300% of total risk-based capital AND CRE grew >= 50% in 36 months.
+# "CRE" per the guidance = construction/land development + multifamily +
+# NON-owner-occupied nonfarm nonresidential (owner-occupied is excluded).
+CD_CONC = 100.0
+CRE_CONC = 300.0
+# Simplified reverse stress test: well-capitalized = total risk-based capital
+# ratio >= 10% of RWA. The cushion above that, divided by the CRE book, is the
+# CRE loss rate that would breach well-capitalized.
+WELL_CAP_TRBC = 0.10
+THIN_CUSHION = 10.0        # breach at a <=10% CRE loss = thin cushion
 UNDERRESERVED = 40.0      # allowance < 40% of noncurrent loans
 
 # Asset bands (in $thousands) for peer grouping.
@@ -63,6 +76,9 @@ SERVICE = {
     # --- Strong KR RAS fits ---------------------------------------------
     "near_10b_threshold":   (22, "KR RAS: $10B readiness — Consumer Compliance (CFPB), Durbin, expanded BSA/AML, Internal Audit, DFAST"),
     "bsa_aml_scaling":      (20, "KR RAS: BSA/AML program enhancement + independent testing (AML & Sanctions / OFAC)"),
+    "thin_cre_cushion":     (22, "KR RAS: CRE stress testing + capital planning — reverse stress test shows a modest CRE loss breaches well-capitalized"),
+    "cre_concentration":    (20, "KR RAS: CRE loan review, credit risk review, CECL/ALLL, CRE stress testing (>=300% of capital — supervisory concentration criteria)"),
+    "cd_concentration":     (20, "KR RAS: construction & development loan review + credit risk management (>=100% of capital — supervisory concentration criteria)"),
     "near_fdicia_5b":       (20, "KR RAS: FDICIA Part 363 ICFR management assessment + auditor attestation (crossing $5B; threshold raised from $1B, effective 2026)"),
     "near_fdicia_1b":       (18, "KR RAS: FDICIA Part 363 annual independent audit + audit-committee independence (crossing $1B; threshold raised from $500M, effective 2026)"),
     "rapid_growth":         (18, "KR RAS: BSA/AML scaling, Internal Audit, enterprise risk assessment; FDICIA Part 363 audit if crossing $1B, ICFR if crossing $5B"),
@@ -93,9 +109,24 @@ def load():
 def add_derived(df):
     num = ["ASSET", "DEP", "EQV", "RBC1AAJ", "RBCRWAJ", "RBCT1CER", "ROA", "ROE",
            "NIMY", "EEFFR", "NCLNLSR", "NPERFV", "ELNANTR", "LNATRESR",
-           "LNLSNTV", "LNLSDEPR", "BRO", "ASSET_PRIOR"]
+           "LNLSNTV", "LNLSDEPR", "BRO", "ASSET_PRIOR",
+           "LNRECONS", "LNREMULT", "LNRENROT", "LNRENROW", "RBCT1J", "RBCT2", "RWAJT"]
     for c in num:
         df[c] = pd.to_numeric(df.get(c), errors="coerce")
+
+    # --- CRE concentration (interagency guidance definition) ---
+    df["TRBC"] = df["RBCT1J"].fillna(0) + df["RBCT2"].fillna(0)      # total risk-based capital
+    df["CRE_TOTAL"] = (df["LNRECONS"].fillna(0) + df["LNREMULT"].fillna(0)
+                       + df["LNRENROT"].fillna(0))                    # excl. owner-occupied
+    df["cre_ratio"] = np.where(df["TRBC"] > 0, df["CRE_TOTAL"] / df["TRBC"] * 100, np.nan)
+    df["cd_ratio"] = np.where(df["TRBC"] > 0, df["LNRECONS"] / df["TRBC"] * 100, np.nan)
+
+    # --- Simplified reverse stress test ---
+    # Capital cushion above well-capitalized, expressed as the CRE loss rate that
+    # would consume it. Mirrors the reverse-stress work paper, from public data.
+    cushion = df["TRBC"] - WELL_CAP_TRBC * df["RWAJT"]
+    df["cre_breach_loss_pct"] = np.where(
+        (df["CRE_TOTAL"] > 0) & (cushion > 0), cushion / df["CRE_TOTAL"] * 100, np.nan)
 
     df["asset_band"] = pd.cut(df["ASSET"], bins=BAND_EDGES, labels=BAND_LABELS,
                               right=False)
@@ -166,6 +197,14 @@ def apply_signals(df):
     # 8. BSA/AML scaling proxy: very fast growth (program must scale with risk).
     sig["bsa_aml_scaling"] = df["asset_growth_yoy"] >= GROWTH_BSA
 
+    # 8b. CRE concentration — interagency supervisory criteria.
+    sig["cd_concentration"] = df["cd_ratio"] >= CD_CONC
+    # The 300% leg also requires 36-month growth >= 50%; that leg is added in
+    # 05_trajectory.py (which has the history). This flags the concentration itself.
+    sig["cre_concentration"] = df["cre_ratio"] >= CRE_CONC
+    # 8c. Reverse stress: a modest CRE loss would breach well-capitalized.
+    sig["thin_cre_cushion"] = (df["cre_breach_loss_pct"] <= THIN_CUSHION) & (df["cre_ratio"] >= 100)
+
     # 9. Pre-enforcement profile: matches what banks looked like ~1yr before an
     #    OCC/Fed order (see study/FINDINGS.md) — weak earnings, high cost, weak
     #    asset quality, brokered-funding reliance. Fires on 3+ of the 4 dimensions.
@@ -208,6 +247,7 @@ def main():
         "EQV", "EQV_pct", "RBC1AAJ", "RBCT1CER", "ROA", "ROA_pct", "ROE",
         "NIMY", "EEFFR", "EEFFR_pct", "NCLNLSR", "NPERFV", "ELNANTR",
         "LNLSDEPR", "brokered_pct", "asset_growth_yoy",
+        "cre_ratio", "cd_ratio", "cre_breach_loss_pct",
     ]
     ranked = df[df["n_signals"] > 0].sort_values(
         ["score", "n_signals", "asset_musd"], ascending=False
