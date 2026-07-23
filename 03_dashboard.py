@@ -205,6 +205,10 @@ TEMPLATE = r"""<!doctype html>
         <input type="text" id="q" placeholder="e.g. Republic, Miami" oninput="render()">
       </div>
       <div class="field">
+        <label>KR RAS service line</label>
+        <select id="svcline" onchange="render()"></select>
+      </div>
+      <div class="field">
         <label>State</label>
         <select id="state" onchange="render()"></select>
       </div>
@@ -337,6 +341,11 @@ function passes(r) {
   if (st && r.STALP !== st) return false;
   const bd = document.getElementById("band").value;
   if (bd && r.asset_band !== bd) return false;
+  const sl = document.getElementById("svcline").value;
+  if (sl) {
+    const grp = CHIP_GROUPS.find(g=>g[0]===sl);
+    if (grp && !grp[1].some(k=>sigList(r).includes(k))) return false;
+  }
   if (r.n_signals < +document.getElementById("minsig").value) return false;
   if (selected.size) {
     const s = sigList(r), mode = document.getElementById("mode").value;
@@ -523,7 +532,7 @@ function expand(i) {
 function toggle(s){ selected.has(s)?selected.delete(s):selected.add(s); render(); }
 function sortBy(k){ if(sortKey===k) sortDir*=-1; else {sortKey=k; sortDir=(k==="NAME"||k==="CITY"||k==="STALP"||k==="asset_band")?1:-1;} render(); }
 function resetAll(){ selected.clear(); document.getElementById("q").value="";
-  ["state","band"].forEach(id=>document.getElementById(id).value="");
+  ["state","band","svcline"].forEach(id=>document.getElementById(id).value="");
   document.getElementById("minsig").value="1"; document.getElementById("mode").value="any"; render(); }
 
 function init(){
@@ -533,6 +542,8 @@ function init(){
   const states = [...new Set(DATA.map(r=>r.STALP).filter(Boolean))].sort();
   document.getElementById("state").innerHTML =
     '<option value="">All states</option>' + states.map(s=>`<option>${s}</option>`).join("");
+  document.getElementById("svcline").innerHTML =
+    '<option value="">All service lines</option>' + CHIP_GROUPS.map(g=>`<option>${g[0]}</option>`).join("");
   render();
 }
 init();
