@@ -285,6 +285,10 @@ TEMPLATE = r"""<!doctype html>
         <select id="state" onchange="render()"></select>
       </div>
       <div class="field">
+        <label>City</label>
+        <input type="text" id="cityf" placeholder="e.g. Miami" oninput="render()">
+      </div>
+      <div class="field">
         <label>Asset band</label>
         <select id="band" onchange="render()">
           <option value="">All sizes</option>
@@ -506,6 +510,8 @@ function passes(r) {
   if (q && !((r.NAME||"").toLowerCase().includes(q) || (r.CITY||"").toLowerCase().includes(q))) return false;
   const st = document.getElementById("state").value;
   if (st && r.STALP !== st) return false;
+  const cf = document.getElementById("cityf").value.trim().toLowerCase();
+  if (cf && !((r.CITY||"").toLowerCase().includes(cf))) return false;
   const bd = document.getElementById("band").value;
   if (bd && r.asset_band !== bd) return false;
   const it = document.getElementById("itype").value;
@@ -756,7 +762,7 @@ function expand(i) {
 function toggle(s){ selected.has(s)?selected.delete(s):selected.add(s); render(); }
 function sortBy(k){ if(sortKey===k) sortDir*=-1; else {sortKey=k; sortDir=(k==="NAME"||k==="CITY"||k==="STALP"||k==="asset_band")?1:-1;} render(); }
 function resetAll(){ selected.clear(); document.getElementById("q").value="";
-  ["state","band","svcline","itype"].forEach(id=>document.getElementById(id).value="");
+  ["state","band","svcline","itype","cityf"].forEach(id=>document.getElementById(id).value="");
   document.getElementById("minsig").value="1"; document.getElementById("mode").value="any"; render(); }
 
 function toggleOverview(){
