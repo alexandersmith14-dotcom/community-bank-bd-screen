@@ -828,15 +828,18 @@ function downloadCSV(){
   const rows = DATA.filter(passes);
   const cols = ["Institution Name","Institution Type","Priority","Priority Score",
     "State","City","Assets ($B)","KR RAS Services","Signals","Key Metrics",
-    "LinkedIn Decision-Maker Search"];
+    "LinkedIn Decision-Maker Search","Description"];
   const lines = [cols.join(",")];
   rows.forEach(r=>{
     const sg = sigList(r);
     const services = [...new Set(sg.map(s=>SIGSERVICE[s]).filter(Boolean))].join("; ");
     const labels = sg.map(s=>SIGLAB[s]||s).join("; ");
+    const km = keyMetricsOf(r);
     const assets = r.asset_musd!=null ? (+r.asset_musd/1000).toFixed(2) : "";
+    const desc = `${r.INST_TYPE} in ${r.CITY||""}, ${r.STALP||""}. Priority ${priorityOf(r)}. `+
+      `Flagged for: ${labels}. KR RAS opportunities: ${services}. Key metrics: ${km}.`;
     const rec = [r.NAME, r.INST_TYPE, priorityOf(r), r.score, r.STALP, r.CITY,
-      assets, services, labels, keyMetricsOf(r), linkedinSearch(r).url];
+      assets, services, labels, km, linkedinSearch(r).url, desc];
     lines.push(rec.map(csvCell).join(","));
   });
   const blob = new Blob([lines.join("\n")], {type:"text/csv"});
