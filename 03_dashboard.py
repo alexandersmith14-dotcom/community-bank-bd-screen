@@ -285,16 +285,8 @@ TEMPLATE = r"""<!doctype html>
         <select id="state" onchange="render()"></select>
       </div>
       <div class="field">
-        <label>City</label>
-        <input type="text" id="cityf" placeholder="e.g. Miami" oninput="render()">
-      </div>
-      <div class="field">
-        <label>Asset band</label>
-        <select id="band" onchange="render()">
-          <option value="">All sizes</option>
-          <option>&lt;$250M</option><option>$250M-$1B</option>
-          <option>$1B-$3B</option><option>$3B+</option>
-        </select>
+        <label>Asset size (click to combine)</label>
+        <div class="chips" id="bandchips"></div>
       </div>
       <div class="field">
         <label>Min. signals</label>
@@ -495,7 +487,16 @@ const METRICS_CU = [
 ];
 
 let selected = new Set();
+let bandSel = new Set();
 let sortKey = "score", sortDir = -1;
+
+// Asset-size bands: [value in data, display label]. Multi-select.
+const BANDS = [["<$250M","$0–$250M"],["$250M-$1B","$250M–$1B"],["$1B-$3B","$1B–$3B"],["$3B+","$3B+"]];
+function renderBandChips(){
+  document.getElementById("bandchips").innerHTML = BANDS.map(b=>
+    `<span class="chip ${bandSel.has(b[0])?"on":""}" onclick="toggleBand('${b[0]}')">${b[1]}</span>`).join("");
+}
+function toggleBand(v){ bandSel.has(v)?bandSel.delete(v):bandSel.add(v); renderBandChips(); render(); }
 
 function fmt(v, kind, dec) {
   if (v === null || v === undefined || v === "" || Number.isNaN(v)) return "—";
@@ -510,10 +511,7 @@ function passes(r) {
   if (q && !((r.NAME||"").toLowerCase().includes(q) || (r.CITY||"").toLowerCase().includes(q))) return false;
   const st = document.getElementById("state").value;
   if (st && r.STALP !== st) return false;
-  const cf = document.getElementById("cityf").value.trim().toLowerCase();
-  if (cf && !((r.CITY||"").toLowerCase().includes(cf))) return false;
-  const bd = document.getElementById("band").value;
-  if (bd && r.asset_band !== bd) return false;
+  if (bandSel.size && !bandSel.has(r.asset_band)) return false;
   const it = document.getElementById("itype").value;
   if (it && r.INST_TYPE !== it) return false;
   const sl = document.getElementById("svcline").value;
@@ -761,8 +759,9 @@ function expand(i) {
 
 function toggle(s){ selected.has(s)?selected.delete(s):selected.add(s); render(); }
 function sortBy(k){ if(sortKey===k) sortDir*=-1; else {sortKey=k; sortDir=(k==="NAME"||k==="CITY"||k==="STALP"||k==="asset_band")?1:-1;} render(); }
-function resetAll(){ selected.clear(); document.getElementById("q").value="";
-  ["state","band","svcline","itype","cityf"].forEach(id=>document.getElementById(id).value="");
+function resetAll(){ selected.clear(); bandSel.clear(); renderBandChips();
+  document.getElementById("q").value="";
+  ["state","svcline","itype"].forEach(id=>document.getElementById(id).value="");
   document.getElementById("minsig").value="1"; document.getElementById("mode").value="any"; render(); }
 
 function toggleOverview(){
@@ -856,6 +855,7 @@ function init(){
     '<option value="">All states</option>' + states.map(s=>`<option>${s}</option>`).join("");
   document.getElementById("svcline").innerHTML =
     '<option value="">All service lines</option>' + CHIP_GROUPS.map(g=>`<option>${g[0]}</option>`).join("");
+  renderBandChips();
 
   // Shared hover tooltip: shows the data-tip of whatever the cursor is over.
   const tip = document.getElementById("tip");
