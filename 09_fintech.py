@@ -27,20 +27,39 @@ import pandas as pd
 # but the real ones are known by name -- matching these floats them to the top
 # as the "quality flag", while the full registry stays name-searchable beneath.
 KNOWN_FINTECHS = [
-    # Distinctive names only (dropped common-word brands like Current, Wise,
-    # Square, Ramp, Dave, Novo, Mercury, Prosper, Global Payments — they matched
-    # shells that merely contain those words). Multi-word forms pin the rest.
-    "PayPal", "Stripe Payments", "Stripe Inc", "Coinbase", "Cash App", "Venmo",
-    "Adyen", "Marqeta", "Dwolla", "Modern Treasury", "Braintree", "Payoneer",
-    "Wise US", "Remitly", "WorldRemit", "Circle Internet", "Airwallex", "Rapyd",
-    "Currencycloud", "Chime Payments", "MoneyLion", "SoFi", "Brex",
+    # Distinctive names only. Common-word brands (Current, Wise, Square, Ramp,
+    # Dave, Novo, Mercury, Prosper, Toast, Unit, Bond, Divvy...) are pinned to a
+    # multi-word form or dropped, because bare words match shells. Extra names
+    # that aren't registered MSBs simply never match -- harmless.
+    # --- Payments / processing ---
+    "PayPal", "Stripe Payments", "Stripe Inc", "Adyen", "Braintree", "Marqeta",
+    "Dwolla", "Modern Treasury", "Payoneer", "Checkout.com", "GoCardless",
+    "Rapyd", "Airwallex", "Nium", "Currencycloud", "Shift4", "Toast Inc",
+    "Bill.com", "Melio", "Plaid", "Finix", "Paystand", "Highnote", "Lithic",
+    "Moov Financial", "Tabapay", "Priority Technology", "Sila Money", "Astra Finance",
+    "Payabli", "Fiserv", "Worldpay", "Nuvei", "Paysafe", "Bluesnap",
+    # --- Remittance / cross-border ---
+    "Remitly", "WorldRemit", "Wise US", "Xoom", "MoneyGram", "Sendwave",
+    "Pangea Money", "Boss Revolution", "dLocal", "EBANX", "Sunrise Banks",
+    # --- Neobanks / BaaS ---
+    "Chime", "Varo Bank", "Varo Money", "MoneyLion", "SoFi", "Brex",
     "Ramp Payments", "Ramp Business", "Bluevine", "Green Dot", "Netspend",
-    "Affirm", "Klarna", "Afterpay", "Upstart", "LendingClub", "OppFi",
-    "Prosper Marketplace", "Best Egg", "Kabbage", "OnDeck", "Fundbox", "Enova",
-    "Kraken", "Gemini Trust", "Paxos", "BitPay", "Robinhood",
-    "Bakkt", "Anchorage Digital", "Fireblocks", "Plaid", "Bill.com", "Melio",
-    "Papaya Global", "Revolut", "Monzo", "Shift4", "Checkout.com", "GoCardless",
-    "Mercury Technologies", "Dave Inc", "Varo Bank", "Varo Money",
+    "Mercury Technologies", "Dave Inc", "Cash App", "Venmo",
+    # --- Lending / BNPL ---
+    "Affirm", "Klarna", "Afterpay", "Sezzle", "Zip Co", "Upstart", "LendingClub",
+    "Prosper Marketplace", "Avant", "OppFi", "Best Egg", "Kabbage", "OnDeck",
+    "Fundbox", "Enova", "Figure Technolog", "Blend Labs", "Petal Card",
+    "Mission Lane", "Oportun", "Possible Financial", "Splash Financial",
+    # --- Crypto / digital assets ---
+    "Coinbase", "Kraken", "Gemini Trust", "Paxos", "BitPay", "Circle Internet",
+    "Anchorage Digital", "Fireblocks", "BitGo", "Bakkt", "Robinhood", "Ripple",
+    "Strike", "MoonPay", "Bitso", "Blockchain.com", "Coinme", "Prime Trust",
+    "Zero Hash", "Fortress Trust", "Uphold",
+    # --- Spend / payroll / expense ---
+    "Expensify", "Deel", "Papaya Global", "Rippling", "Gusto", "Justworks",
+    "Remote.com", "Emburse", "Airbase",
+    # --- International neobanks ---
+    "Revolut", "Monzo", "Nubank", "MercadoPago", "Wealthsimple",
 ]
 KNOWN_RE = re.compile(r"\b(" + "|".join(re.escape(k) for k in KNOWN_FINTECHS) + r")\b", re.I)
 
@@ -118,7 +137,14 @@ def main():
     # top the score-sorted dashboard; the full registry stays searchable.
     ft["ft_known"] = (ft["LEGAL NAME"] + " " + ft["DBA NAME"]).apply(
         lambda s: bool(KNOWN_RE.search(s)))
+    # Shell tell: CO/WY-registered "Ltd"/"Limited" entities are overwhelmingly
+    # shells (real US fintechs are Inc/LLC in CA/NY, never Ltd in CO). Don't let
+    # them claim the known flag, and demote them so they sink below real ones.
+    shell_like = (ft["STATE"].isin({"CO", "WY"}) &
+                  ft["LEGAL NAME"].str.contains(r"\b(?:Ltd|Limited)\b", case=False, regex=True))
+    ft["ft_known"] = ft["ft_known"] & ~shell_like
     ft.loc[ft["ft_known"], "score"] = ft.loc[ft["ft_known"], "score"] + 100
+    ft.loc[shell_like, "score"] = ft.loc[shell_like, "score"] - 40
 
     ft["INST_TYPE"] = "Fintech"
     ft["CERT"] = 90_000_000 + ft.index          # synthetic id, no collision
