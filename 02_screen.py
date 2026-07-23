@@ -55,6 +55,8 @@ BAND_LABELS = ["<$250M", "$250M-$1B", "$1B-$3B", "$3B+"]
 # Suite). Weights favor genuine RAS-sellable signals; signals that belong to a
 # different KR practice are kept visible but scored low and tagged "Refer".
 SERVICE = {
+    # --- Flagship: matches the empirical pre-enforcement financial profile ---
+    "pre_enforcement":      (24, "KR RAS: PRE-ENFORCEMENT READINESS — risk assessment, Internal Audit, BSA/AML & remediation-readiness before regulators act"),
     # --- Strong KR RAS fits ---------------------------------------------
     "near_10b_threshold":   (22, "KR RAS: $10B readiness — Consumer Compliance (CFPB), expanded BSA/AML, Internal Audit; FDICIA ICFR attestation"),
     "bsa_aml_scaling":      (20, "KR RAS: BSA/AML program enhancement + independent testing (AML & Sanctions / OFAC)"),
@@ -155,6 +157,16 @@ def apply_signals(df):
 
     # 8. BSA/AML scaling proxy: very fast growth (program must scale with risk).
     sig["bsa_aml_scaling"] = df["asset_growth_yoy"] >= GROWTH_BSA
+
+    # 9. Pre-enforcement profile: matches what banks looked like ~1yr before an
+    #    OCC/Fed order (see study/FINDINGS.md) — weak earnings, high cost, weak
+    #    asset quality, brokered-funding reliance. Fires on 3+ of the 4 dimensions.
+    d_earn = (df["ROA_pct"] <= 0.25).fillna(False)
+    d_cost = (df["EEFFR_pct"] >= 0.75).fillna(False)
+    d_credit = ((df["NPERFV_pct"] >= 0.75) | (df["NCLNLSR_pct"] >= 0.75)).fillna(False)
+    d_fund = (df["brokered_pct"] >= 0.10).fillna(False)
+    sig["pre_enforcement"] = (d_earn.astype(int) + d_cost.astype(int)
+                              + d_credit.astype(int) + d_fund.astype(int)) >= 3
 
     for k, v in sig.items():
         df[k] = v.fillna(False).astype(bool)

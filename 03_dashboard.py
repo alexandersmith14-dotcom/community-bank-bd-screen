@@ -201,6 +201,8 @@ TEMPLATE = r"""<!doctype html>
   .sigtag { font-size:11px; background:var(--chip-bg); border:1px solid var(--border); border-radius:5px; padding:1px 6px; color:var(--text-secondary); }
   .chip.trend { border-style:dashed; }
   .chip.trend.on { border-style:solid; }
+  .chip.flagship { border-color:var(--crit); color:var(--crit); font-weight:600; }
+  .chip.flagship.on { background:var(--crit); color:#fff; border-color:var(--crit); }
   .detail td { background:var(--page); }
   .detail-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:10px 20px; padding:6px 2px; }
   .svcmap { display:flex; flex-direction:column; gap:5px; padding:2px; }
@@ -332,6 +334,7 @@ const EDGAR = /*__EDGAR__*/;
 const CU_SPARK = /*__CU_SPARK__*/;
 
 const SIGNALS = [
+  ["pre_enforcement","Pre-enforcement profile ⚠","flagship"],
   ["excess_capital","Excess capital","snapshot"],
   ["credit_deterioration","Credit deterioration","snapshot"],
   ["under_reserved","Under-reserved","snapshot"],
@@ -360,6 +363,7 @@ const SIGLAB = Object.fromEntries(SIGNALS.map(s => [s[0], s[1]]));
 
 // Signal -> KR Risk Advisory Services line (kept in step with the Python maps).
 const SIGSERVICE = {
+  pre_enforcement:     "Pre-enforcement readiness — risk assessment, Internal Audit, BSA/AML & remediation readiness before regulators act",
   near_10b_threshold:  "$10B readiness — Consumer Compliance (CFPB), BSA/AML, Internal Audit; ICFR / stress-testing (FDICIA banks, NCUA credit unions)",
   runway_to_10b:       "$10B runway — Consumer Compliance, BSA/AML, Internal Audit; FDICIA ICFR attestation",
   near_fdicia_1b:      "FDICIA Part 363 ICFR attestation readiness + Internal Audit (approaching/crossing $1B)",
@@ -385,6 +389,7 @@ const SIGSERVICE = {
 
 // Signal pills grouped under the KR RAS service line they feed.
 const CHIP_GROUPS = [
+  ["⚠ Pre-enforcement risk (flagship)", ["pre_enforcement"]],
   ["BSA/AML & Sanctions", ["bsa_aml_scaling","rapid_growth","growth_accelerating"]],
   ["FDICIA / audit / $10B readiness", ["near_fdicia_1b","near_500m_audit","near_10b_threshold","runway_to_10b"]],
   ["Internal Audit & CECL (credit)", ["credit_deterioration","under_reserved","credit_turning"]],
@@ -396,6 +401,7 @@ const CHIP_GROUPS = [
 
 // Plain-language criteria shown on hover.
 const DESC = {
+  pre_enforcement: "Financials match banks in the year before an OCC/Fed enforcement order — weak earnings + high cost + weak asset quality + brokered funding (3+ of 4). See study/FINDINGS.md.",
   excess_capital: "Equity/assets in the top 20% of its size peer group — well-capitalized, with a deployment question.",
   credit_deterioration: "Net charge-offs or noncurrent assets in the worst 15% of size peers.",
   under_reserved: "Credit deterioration AND loan-loss allowance under 40% of noncurrent loans.",
@@ -419,6 +425,7 @@ const DESC = {
   ft_fx_crypto: "Currency dealer / FX — often crypto or cross-border; heavy BSA/AML and sanctions exposure.",
 };
 const GROUP_DESC = {
+  "⚠ Pre-enforcement risk (flagship)": "KR RAS: banks whose financials match the empirical pattern ~1 year before an OCC/Fed enforcement order — a warm, specific reason to get ahead of it (risk assessment, Internal Audit, BSA/AML, remediation readiness).",
   "BSA/AML & Sanctions": "KR RAS: BSA/AML program build & independent testing, OFAC/sanctions.",
   "FDICIA / audit / $10B readiness": "KR RAS: FDICIA ICFR (banks) & NCUA $500M CPA audit (credit unions); $10B-tier readiness (CFPB, stress testing).",
   "Internal Audit & CECL (credit)": "KR RAS: Internal Audit loan review, CECL model validation, ALLL governance.",
@@ -437,6 +444,7 @@ function esc(s){ return String(s).replace(/"/g,"&quot;"); }
 
 // Decision-maker titles to target on LinkedIn, by service-line group.
 const LD_TITLES = {
+  "⚠ Pre-enforcement risk (flagship)": ["Chief Executive Officer","Chief Financial Officer","Chief Risk Officer","Chief Audit Executive","BSA Officer"],
   "BSA/AML & Sanctions": ["BSA Officer","Chief Compliance Officer","AML"],
   "FDICIA / audit / $10B readiness": ["Chief Financial Officer","Controller","Chief Risk Officer","Supervisory Committee"],
   "Internal Audit & CECL (credit)": ["Chief Audit Executive","Internal Audit","Chief Risk Officer","Chief Credit Officer"],
