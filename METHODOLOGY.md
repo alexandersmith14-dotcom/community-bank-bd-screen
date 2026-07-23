@@ -51,18 +51,27 @@ Suite. Weights favor genuinely RAS-sellable signals; signals that belong to a
 
 | Signal | Rule (default) | FDIC fields | KR RAS service (weight) |
 |---|---|---|---|
-| **Near $10B threshold** | assets between $8B and $10B | `ASSET` | $10B readiness — Consumer Compliance (CFPB), expanded BSA/AML, Internal Audit build-out (22) |
+| **Near $10B threshold** | assets between $8B and $10B | `ASSET` | $10B readiness — Consumer Compliance (CFPB), BSA/AML, Internal Audit; FDICIA/SOX ICFR attestation (22) |
 | **BSA/AML scaling** *(proxy)* | assets up ≥ 20% YoY | `ASSET` (YoY) | BSA/AML program enhancement + independent testing, OFAC (20) |
-| **Rapid growth** | assets up ≥ 15% YoY | `ASSET` (YoY) | BSA/AML scaling, Internal Audit, enterprise risk assessment (18) |
-| **Credit deterioration** | net charge-offs *or* noncurrent in worst 15% of band | `NCLNLSR`, `NPERFV` | Internal Audit loan review + ALLL/CECL governance (18) |
+| **Near $1B (FDICIA)** | assets between $850M and $1.15B | `ASSET` | FDICIA Part 363 ICFR attestation readiness + Internal Audit (18) |
+| **Rapid growth** | assets up ≥ 15% YoY | `ASSET` (YoY) | BSA/AML scaling, Internal Audit, risk assessment; FDICIA ICFR if crossing $1B (18) |
+| **Credit deterioration** | net charge-offs *or* noncurrent in worst 15% of band | `NCLNLSR`, `NPERFV` | Internal Audit loan review + **CECL model validation** + ALLL/CECL governance (18) |
 | **Weak efficiency** | efficiency ratio ≥ 70% **and** top 20% of band | `EEFFR` | Robotic Process Automation (RPA) + Internal Audit process review (15) |
-| **Under-reserved** *(intensifier)* | deterioration **and** allowance < 40% of noncurrent | `ELNANTR` | ALLL/CECL reserve governance review — Internal Audit (10) |
+| **Under-reserved** *(intensifier)* | deterioration **and** allowance < 40% of noncurrent | `ELNANTR` | CECL model validation / reserve adequacy review (10) |
 | **Funding / liquidity** | loan/deposit ≥ 100% *or* worst 15% *or* brokered ≥ 10% of deposits | `LNLSDEPR`, `BRO`, `DEP` | *(partial)* Internal Audit of liquidity/funding controls; ALM advisory is another practice (10) |
 | **Excess capital** | equity/assets in top 20% of peer band | `EQV` | *Refer* — capital deployment / M&A (other KR practice); RAS angle = M&A compliance due diligence (5) |
 | **Weak profitability** | ROA in bottom 15% of band *or* negative | `ROA` | *Refer* — earnings / margin advisory (other KR practice); RAS angle = RPA cost automation (5) |
 
-A standing cross-sell that isn't signal-derived: **Cybersecurity / Digital
-Forensics & Incident Response** applies to essentially every institution.
+Two standing services that aren't cleanly signal-derived:
+
+- **Cybersecurity / Digital Forensics & Incident Response** applies to essentially
+  every institution — a universal cross-sell.
+- **SOX ICFR (Section 404)** applies to *publicly traded* banks. Call Report data
+  does not indicate which banks are SEC registrants, so SOX can't be flagged from
+  this dataset alone; it rides along on the $1B+ / $10B ICFR-attestation signals
+  and needs an external public/private data point to target precisely. **FDICIA**
+  is the size-based analog (attestation at $1B) that *can* be flagged — see the
+  "Near $1B (FDICIA)" signal above.
 
 **Scoring.** Each matched signal carries a weight (see `SERVICE` in
 `02_screen.py`); a bank's `score` is the sum, and `n_signals` is the count.

@@ -255,6 +255,7 @@ const SIGNALS = [
   ["funding_liquidity","Funding / liquidity","snapshot"],
   ["rapid_growth","Rapid growth","snapshot"],
   ["near_10b_threshold","Approaching $10B","snapshot"],
+  ["near_fdicia_1b","Near $1B (FDICIA)","snapshot"],
   ["weak_profitability","Weak profitability","snapshot"],
   ["bsa_aml_scaling","BSA/AML scaling","snapshot"],
   // 5-year trajectory signals (direction of travel)
@@ -268,15 +269,16 @@ const SIGLAB = Object.fromEntries(SIGNALS.map(s => [s[0], s[1]]));
 
 // Signal -> KR Risk Advisory Services line (kept in step with the Python maps).
 const SIGSERVICE = {
-  near_10b_threshold:  "$10B readiness — Consumer Compliance (CFPB), BSA/AML, Internal Audit",
-  runway_to_10b:       "$10B runway — Consumer Compliance, BSA/AML, Internal Audit readiness",
+  near_10b_threshold:  "$10B readiness — Consumer Compliance (CFPB), BSA/AML, Internal Audit; FDICIA/SOX ICFR attestation",
+  runway_to_10b:       "$10B runway — Consumer Compliance, BSA/AML, Internal Audit; FDICIA/SOX ICFR attestation",
+  near_fdicia_1b:      "FDICIA Part 363 ICFR attestation readiness + Internal Audit (approaching/crossing $1B)",
   bsa_aml_scaling:     "BSA/AML program enhancement + independent testing",
-  rapid_growth:        "BSA/AML scaling, Internal Audit, enterprise risk assessment",
-  growth_accelerating: "BSA/AML scaling + Internal Audit as growth outpaces controls",
-  credit_deterioration:"Internal Audit loan review + ALLL/CECL governance",
-  credit_turning:      "Early Internal Audit loan review / credit-risk controls",
+  rapid_growth:        "BSA/AML scaling, Internal Audit, risk assessment; FDICIA ICFR if crossing $1B",
+  growth_accelerating: "BSA/AML scaling + Internal Audit; FDICIA ICFR readiness if crossing $1B",
+  credit_deterioration:"Internal Audit loan review + CECL model validation + ALLL/CECL governance",
+  credit_turning:      "Early Internal Audit loan review + CECL model validation",
   weak_efficiency:     "Robotic Process Automation (RPA) + Internal Audit process review",
-  under_reserved:      "ALLL/CECL reserve governance review (Internal Audit)",
+  under_reserved:      "CECL model validation / reserve adequacy review",
   funding_liquidity:   "Internal Audit of liquidity/funding risk controls (partial)",
   margin_eroding:      "RPA cost automation (partial)",
   excess_capital:      "Refer — capital deployment / M&A (other KR practice)",

@@ -37,6 +37,10 @@ GROWTH_FAST = 0.15        # 15%+ YoY asset growth
 GROWTH_BSA = 0.20         # 20%+ growth -> BSA/AML scaling note
 NEAR_10B_LOW = 8_000_000  # $8B  (thousands)
 NEAR_10B_HIGH = 10_000_000  # $10B (thousands)
+# FDICIA Part 363 ICFR management/auditor attestation is triggered at $1B in
+# assets, so banks approaching or just past $1B are prime FDICIA prospects.
+FDICIA_LOW = 850_000      # $850M (thousands)
+FDICIA_HIGH = 1_150_000   # $1.15B (thousands)
 UNDERRESERVED = 40.0      # allowance < 40% of noncurrent loans
 
 # Asset bands (in $thousands) for peer grouping.
@@ -50,12 +54,13 @@ BAND_LABELS = ["<$250M", "$250M-$1B", "$1B-$3B", "$3B-$10B"]
 # different KR practice are kept visible but scored low and tagged "Refer".
 SERVICE = {
     # --- Strong KR RAS fits ---------------------------------------------
-    "near_10b_threshold":   (22, "KR RAS: $10B readiness — Consumer Compliance (CFPB), expanded BSA/AML, Internal Audit build-out"),
+    "near_10b_threshold":   (22, "KR RAS: $10B readiness — Consumer Compliance (CFPB), expanded BSA/AML, Internal Audit; FDICIA/SOX ICFR attestation"),
     "bsa_aml_scaling":      (20, "KR RAS: BSA/AML program enhancement + independent testing (AML & Sanctions / OFAC)"),
-    "rapid_growth":         (18, "KR RAS: BSA/AML scaling, Internal Audit, enterprise risk assessment (Risk Intelligence Suite)"),
-    "credit_deterioration": (18, "KR RAS: Internal Audit loan review + ALLL/CECL governance review"),
+    "near_fdicia_1b":       (18, "KR RAS: FDICIA Part 363 ICFR attestation readiness + Internal Audit (approaching/crossing $1B)"),
+    "rapid_growth":         (18, "KR RAS: BSA/AML scaling, Internal Audit, enterprise risk assessment (Risk Intelligence Suite); FDICIA ICFR if crossing $1B"),
+    "credit_deterioration": (18, "KR RAS: Internal Audit loan review + CECL model validation + ALLL/CECL governance"),
     "weak_efficiency":      (15, "KR RAS: Robotic Process Automation (RPA) + Internal Audit process review"),
-    "under_reserved":       (10, "KR RAS: ALLL/CECL reserve governance review (Internal Audit)"),
+    "under_reserved":       (10, "KR RAS: CECL model validation / reserve adequacy review"),
     # --- Partial fit ----------------------------------------------------
     "funding_liquidity":    (10, "KR RAS (partial): Internal Audit of liquidity/funding risk controls; ALM advisory is another practice"),
     # --- Not RAS: surface but refer to another KR practice --------------
@@ -136,6 +141,11 @@ def apply_signals(df):
     # 6. Approaching the $10B regulatory tier.
     sig["near_10b_threshold"] = (
         (df["ASSET"] >= NEAR_10B_LOW) & (df["ASSET"] < NEAR_10B_HIGH)
+    )
+
+    # 6b. Approaching / just past the $1B FDICIA Part 363 ICFR trigger.
+    sig["near_fdicia_1b"] = (
+        (df["ASSET"] >= FDICIA_LOW) & (df["ASSET"] < FDICIA_HIGH)
     )
 
     # 7. Weak profitability: bottom of peer group or losing money.
