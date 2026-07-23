@@ -35,6 +35,8 @@ CU_COLS = [
     "NW_RATIO", "NW_RATIO_pct", "DELINQ", "NCO", "LOAN_TO_SHARE",
     "EXP_RATIO", "MEMBERS",
 ]
+# Fintech columns (present only when 09_fintech.py has run).
+FT_COLS = ["FT_STATES", "FT_ACTIVITIES", "FT_BRANCHES", "FT_DBA", "FT_KNOWN"]
 
 
 def main():
@@ -43,10 +45,12 @@ def main():
     frames = [banks]
     if os.path.exists("output/cu_targets.csv"):
         frames.append(pd.read_csv("output/cu_targets.csv"))
+    if os.path.exists("output/ft_targets.csv"):
+        frames.append(pd.read_csv("output/ft_targets.csv"))
     raw = pd.concat(frames, ignore_index=True, sort=False)
 
     has_trend = all(c in raw.columns for c in TRAJ_COLS)
-    embed = ["INST_TYPE"] + COLS + CU_COLS + (TRAJ_COLS if has_trend else [])
+    embed = ["INST_TYPE"] + COLS + CU_COLS + FT_COLS + (TRAJ_COLS if has_trend else [])
     cols = [c for c in dict.fromkeys(embed) if c in raw.columns]
     df = raw[cols].copy()
     df["signals"] = df["signals"].fillna("")
@@ -70,12 +74,14 @@ def main():
     rep = current_repdte()
     n_bank = int((df["INST_TYPE"] == "Bank").sum())
     n_cu = int((df["INST_TYPE"] == "Credit Union").sum())
+    n_ft = int((df["INST_TYPE"] == "Fintech").sum())
     meta = {
         "quarter": f"Q{(int(rep[4:6]) - 1) // 3 + 1} {rep[:4]}",
         "date": f"{rep[4:6]}/{rep[:4]}",
         "flagged": len(df),
         "nBank": n_bank,
         "nCU": n_cu,
+        "nFT": n_ft,
         "hasTrend": has_trend,
     }
 
@@ -88,7 +94,7 @@ def main():
     )
     with open("output/dashboard.html", "w", encoding="utf-8") as f:
         f.write(html)
-    print(f"Wrote output/dashboard.html  ({n_bank:,} banks + {n_cu:,} credit unions)")
+    print(f"Wrote output/dashboard.html  ({n_bank:,} banks + {n_cu:,} credit unions + {n_ft:,} fintechs)")
 
     # Artifact-ready fragment: the claude.ai Artifact host supplies its own
     # <!doctype>/<head>/<body>, so we emit only the <style> block + body inner
@@ -218,6 +224,7 @@ TEMPLATE = r"""<!doctype html>
   a.ldlink:hover { filter:brightness(1.08); }
   .pub { font-size:10.5px; font-weight:600; color:var(--good); border:1px solid var(--good); border-radius:4px; padding:0 4px; vertical-align:middle; }
   .cu { font-size:10.5px; font-weight:600; color:var(--series-1); border:1px solid var(--series-1); border-radius:4px; padding:0 4px; vertical-align:middle; }
+  .ft { font-size:10.5px; font-weight:600; color:#7b5cff; border:1px solid #7b5cff; border-radius:4px; padding:0 4px; vertical-align:middle; }
   .offlist { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:3px 18px; padding:2px 2px 6px; }
   .offrow { display:flex; justify-content:space-between; gap:10px; border-bottom:1px dotted var(--grid); padding:3px 0; }
   .offname { font-weight:600; font-size:12.5px; }
@@ -244,9 +251,10 @@ TEMPLATE = r"""<!doctype html>
       <div class="field">
         <label>Institution type</label>
         <select id="itype" onchange="render()">
-          <option value="">Banks + Credit Unions</option>
+          <option value="">All types</option>
           <option value="Bank">Banks only</option>
           <option value="Credit Union">Credit Unions only</option>
+          <option value="Fintech">Fintechs only</option>
         </select>
       </div>
       <div class="field">
@@ -323,6 +331,12 @@ const SIGNALS = [
   ["growth_accelerating","Growth accelerating ↗","trend"],
   ["runway_to_10b","Runway to $10B","trend"],
   ["margin_eroding","Margin eroding ↘","trend"],
+  // Fintech (MSB) regulatory-footprint signals
+  ["ft_national","National transmitter (40+ st)","fintech"],
+  ["ft_fullstack","Full payments stack","fintech"],
+  ["ft_multistate","Multistate transmitter","fintech"],
+  ["ft_prepaid","Prepaid access","fintech"],
+  ["ft_fx_crypto","FX / crypto","fintech"],
 ];
 const SIGLAB = Object.fromEntries(SIGNALS.map(s => [s[0], s[1]]));
 
@@ -344,6 +358,11 @@ const SIGSERVICE = {
   excess_capital:      "Refer — capital deployment / M&A (other KR practice)",
   capital_building:    "Refer — capital deployment / M&A (other KR practice)",
   weak_profitability:  "Refer — earnings / margin advisory (other KR practice)",
+  ft_national:         "BSA/AML program + independent testing; multistate money-transmitter licensing (40+ states)",
+  ft_fullstack:        "Enterprise BSA/AML program, independent testing, SOC/audit (money transmitter + prepaid)",
+  ft_multistate:       "BSA/AML program + independent testing; state MTL compliance (scaling)",
+  ft_prepaid:          "BSA/AML + FinCEN prepaid-access rule compliance; consumer compliance",
+  ft_fx_crypto:        "BSA/AML for virtual-currency / FX money transmission; OFAC/sanctions",
 };
 
 // Signal pills grouped under the KR RAS service line they feed.
@@ -353,6 +372,7 @@ const CHIP_GROUPS = [
   ["Internal Audit & CECL (credit)", ["credit_deterioration","under_reserved","credit_turning"]],
   ["Robotic Process Automation", ["weak_efficiency","margin_eroding"]],
   ["Internal Audit — liquidity", ["funding_liquidity"]],
+  ["Fintech — BSA/AML & licensing", ["ft_national","ft_fullstack","ft_multistate","ft_prepaid","ft_fx_crypto"]],
   ["Refer — other KR practice", ["excess_capital","weak_profitability","capital_building"]],
 ];
 
@@ -374,6 +394,11 @@ const DESC = {
   growth_accelerating: "5-year trend: assets 10%+ YoY and 3+ pts faster than the year before.",
   runway_to_10b: "5-year trend: $5B+ now and on pace to cross $10B within 12 quarters.",
   margin_eroding: "5-year trend: ROA falling and efficiency ratio rising (worsening margins).",
+  ft_national: "Registered money transmitter operating in 40+ states — maximal BSA/AML + multistate-licensing burden.",
+  ft_fullstack: "Money transmitter AND prepaid-access provider — a full payments stack (a better real-fintech signal).",
+  ft_multistate: "Money transmitter operating in 10–39 states — scaling multistate compliance.",
+  ft_prepaid: "Provides or sells prepaid access (cards/stored value) — FinCEN prepaid-rule + BSA/AML.",
+  ft_fx_crypto: "Currency dealer / FX — often crypto or cross-border; heavy BSA/AML and sanctions exposure.",
 };
 const GROUP_DESC = {
   "BSA/AML & Sanctions": "KR RAS: BSA/AML program build & independent testing, OFAC/sanctions.",
@@ -382,6 +407,7 @@ const GROUP_DESC = {
   "Robotic Process Automation": "KR RAS: automating manual compliance and back-office processes.",
   "Internal Audit — liquidity": "KR RAS: Internal Audit of liquidity and funding risk controls.",
   "Refer — other KR practice": "Not RAS — refer to capital/M&A or earnings advisory; shown for completeness.",
+  "Fintech — BSA/AML & licensing": "KR RAS: BSA/AML programs & independent testing, money-transmitter licensing, prepaid/OFAC for payment fintechs (FinCEN MSB registry).",
 };
 const TILE_DESC = {
   all: "Reset every filter and show the full flagged list.",
@@ -399,6 +425,7 @@ const LD_TITLES = {
   "Robotic Process Automation": ["Chief Operating Officer"],
   "Internal Audit — liquidity": ["Treasurer","Chief Financial Officer"],
   "Refer — other KR practice": ["President","Chief Executive Officer"],
+  "Fintech — BSA/AML & licensing": ["BSA Officer","Chief Compliance Officer","Chief Risk Officer","General Counsel","Head of Compliance"],
 };
 
 // Build a LinkedIn people-search URL for this bank's relevant decision-makers.
@@ -485,9 +512,10 @@ function renderTiles(rows) {
   const aml = rows.filter(r=>has(r,"bsa_aml_scaling","rapid_growth","growth_accelerating")).length;
   const ten = rows.filter(r=>has(r,"near_10b_threshold","runway_to_10b")).length;
   const nb = rows.filter(r=>r.INST_TYPE==="Bank").length;
-  const ncu = rows.length - nb;
+  const ncu = rows.filter(r=>r.INST_TYPE==="Credit Union").length;
+  const nft = rows.filter(r=>r.INST_TYPE==="Fintech").length;
   const t = [
-    ["Institutions in view", rows.length.toLocaleString(), `${nb.toLocaleString()} banks · ${ncu.toLocaleString()} credit unions`, "all"],
+    ["Institutions in view", rows.length.toLocaleString(), `${nb.toLocaleString()} bk · ${ncu.toLocaleString()} cu · ${nft.toLocaleString()} ft`, "all"],
     ["3+ signals", ge3.toLocaleString(), "stacked RAS opportunities", "ge3"],
     ["AML / growth prospects", aml.toLocaleString(), "BSA/AML + Internal Audit", "aml"],
     ["$10B-tier prospects", ten.toLocaleString(), "Consumer Compliance + IA readiness", "ten"],
@@ -552,12 +580,14 @@ function renderTable(rows) {
     (rows.length>cap?` (top ${cap} by current sort — narrow the filters to see the rest)`:"");
   document.getElementById("tbody").innerHTML = show.map((r,i)=>{
     const tags = sigList(r).map(s=>`<span class="sigtag">${SIGLAB[s]||s}</span>`).join("");
-    const isCU = r.INST_TYPE==="Credit Union";
-    const eg = isCU ? null : EDGAR[String(r.CERT)];
+    const isBank = r.INST_TYPE==="Bank";
+    const eg = isBank ? EDGAR[String(r.CERT)] : null;
     const pub = eg ? ` <span class="pub" title="Public — SEC registrant">${eg.ticker||"public"}</span>` : "";
-    const cu = isCU ? ` <span class="cu" title="Credit union (NCUA)">CU</span>` : "";
+    let tag = "";
+    if (r.INST_TYPE==="Credit Union") tag = ` <span class="cu" title="Credit union (NCUA)">CU</span>`;
+    else if (r.INST_TYPE==="Fintech") tag = ` <span class="ft" title="Fintech / MSB (FinCEN)">${r.FT_KNOWN?"FINTECH":"MSB"}</span>`;
     return `<tr onclick="expand(${i})" data-i="${i}">`+
-      `<td>${r.NAME||""}${cu}${pub}</td><td>${r.STALP||""}</td><td>${r.CITY||""}</td>`+
+      `<td>${r.NAME||""}${tag}${pub}</td><td>${r.STALP||""}</td><td>${r.CITY||""}</td>`+
       `<td class="num">${fmt(r.asset_musd,"num",0)}</td><td>${r.asset_band||""}</td>`+
       `<td class="num">${r.score}</td><td class="num">${r.n_signals}</td>`+
       `<td><div class="sigtags">${tags}</div></td></tr>`;
@@ -598,18 +628,33 @@ function expand(i) {
   document.querySelectorAll("tr.detail").forEach(e=>e.remove());
   if (existing) return;
   const fired = new Set(sigList(r));
+  const isBank = r.INST_TYPE==="Bank";
   const isCU = r.INST_TYPE==="Credit Union";
-  const METRICS = isCU ? METRICS_CU : METRICS_BANK;
-  const cells = METRICS.map(m=>{
-    let cls="mv";
-    if (["EQV","NW_RATIO"].includes(m[0]) && fired.has("excess_capital")) cls="mv gd";
-    if (["NCLNLSR","NPERFV","DELINQ","NCO"].includes(m[0]) && fired.has("credit_deterioration")) cls="mv hi";
-    if (["EEFFR","EXP_RATIO"].includes(m[0]) && fired.has("weak_efficiency")) cls="mv hi";
-    if (m[0]==="ROA" && fired.has("weak_profitability")) cls="mv lo";
-    if (["LNLSDEPR","brokered_pct","LOAN_TO_SHARE"].includes(m[0]) && fired.has("funding_liquidity")) cls="mv hi";
-    if (m[0]==="asset_growth_yoy" && (fired.has("rapid_growth")||fired.has("growth_accelerating"))) cls="mv gd";
-    return `<div class="metric"><span class="m">${m[1]}</span><span class="${cls}">${fmt(r[m[0]],m[2],m[3])}</span></div>`;
-  }).join("");
+  const isFT = r.INST_TYPE==="Fintech";
+  let cells, detailHdr;
+  if (isFT) {
+    detailHdr = "Regulatory footprint (FinCEN MSB)";
+    const rows = [
+      ["States of MSB activity", fmt(r.FT_STATES,"num",0)],
+      ["Branches / agents", fmt(r.FT_BRANCHES,"num",0)],
+      ["Also does business as", r.FT_DBA || "—"],
+      ["MSB activities", r.FT_ACTIVITIES || "—"],
+    ];
+    cells = rows.map(x=>`<div class="metric"><span class="m">${x[0]}</span><span class="mv">${x[1]}</span></div>`).join("");
+  } else {
+    detailHdr = "Financials";
+    const METRICS = isCU ? METRICS_CU : METRICS_BANK;
+    cells = METRICS.map(m=>{
+      let cls="mv";
+      if (["EQV","NW_RATIO"].includes(m[0]) && fired.has("excess_capital")) cls="mv gd";
+      if (["NCLNLSR","NPERFV","DELINQ","NCO"].includes(m[0]) && fired.has("credit_deterioration")) cls="mv hi";
+      if (["EEFFR","EXP_RATIO"].includes(m[0]) && fired.has("weak_efficiency")) cls="mv hi";
+      if (m[0]==="ROA" && fired.has("weak_profitability")) cls="mv lo";
+      if (["LNLSDEPR","brokered_pct","LOAN_TO_SHARE"].includes(m[0]) && fired.has("funding_liquidity")) cls="mv hi";
+      if (m[0]==="asset_growth_yoy" && (fired.has("rapid_growth")||fired.has("growth_accelerating"))) cls="mv gd";
+      return `<div class="metric"><span class="m">${m[1]}</span><span class="${cls}">${fmt(r[m[0]],m[2],m[3])}</span></div>`;
+    }).join("");
+  }
   // KR RAS service mapping for each fired signal
   const svcRows = sigList(r).map(s=>{
     const refer = (SIGSERVICE[s]||"").startsWith("Refer");
@@ -617,9 +662,9 @@ function expand(i) {
            `<span class="svc ${refer?"refer":""}">${SIGSERVICE[s]||""}</span></div>`;
   }).join("");
 
-  // 5-year trajectory block (banks only; CU history not tracked)
+  // 5-year trajectory block (banks only)
   let trendHtml = "";
-  const sp = isCU ? null : SPARK.series[String(r.CERT)];
+  const sp = isBank ? SPARK.series[String(r.CERT)] : null;
   if (sp) {
     const specs = [
       ["Equity / assets", sp.eqv, r.EQV_slope, true, "%"],
@@ -652,7 +697,7 @@ function expand(i) {
     `<div class="muted" style="font-size:12px;margin-top:4px">Targets: ${ld.titles.join(" · ")}. Opens a LinkedIn people search — review and connect manually.</div>`;
 
   // Verified board & executives for public banks (SEC EDGAR; banks only)
-  const eg = isCU ? null : EDGAR[String(r.CERT)];
+  const eg = isBank ? EDGAR[String(r.CERT)] : null;
   let egBlock = "";
   if (eg) {
     const ppl = (eg.officers||[]).map(o=>
@@ -664,11 +709,12 @@ function expand(i) {
       `<a class="muted" style="font-size:12px" href="${eg.edgar}" target="_blank" rel="noopener">SEC filings & latest proxy (DEF 14A) →</a>`;
   }
 
+  const idLabel = isFT ? "FinCEN MSB registrant" : isCU ? `NCUA charter ${r.CERT}` : `FDIC CERT ${r.CERT}`;
   tr.innerHTML = `<td colspan="8"><div style="padding:4px 2px 10px">`+
-    `<div style="color:var(--text-secondary);margin-bottom:8px">FDIC CERT ${r.CERT}</div>`+
+    `<div style="color:var(--text-secondary);margin-bottom:8px">${idLabel}</div>`+
     `<div class="trendhdr">KR RAS services to pitch</div><div class="svcmap">${svcRows}</div>`+
     ldBlock+egBlock+
-    `<div class="trendhdr">Financials</div><div class="detail-grid">${cells}</div>${trendHtml}</div></td>`;
+    `<div class="trendhdr">${detailHdr}</div><div class="detail-grid">${cells}</div>${trendHtml}</div></td>`;
   const rowEl = document.querySelector(`tr[data-i="${i}"]`);
   rowEl.after(tr);
 }
@@ -681,8 +727,8 @@ function resetAll(){ selected.clear(); document.getElementById("q").value="";
 
 function init(){
   document.getElementById("sub").textContent =
-    `${META.flagged.toLocaleString()} flagged — ${META.nBank.toLocaleString()} community banks (FDIC) + ${META.nCU.toLocaleString()} credit unions (NCUA), ${META.quarter}` +
-    (META.hasTrend ? ". Click any institution for its detail; banks include 5-year trajectory." : ".");
+    `${META.flagged.toLocaleString()} flagged — ${META.nBank.toLocaleString()} banks (FDIC) + ${META.nCU.toLocaleString()} credit unions (NCUA) + ${META.nFT.toLocaleString()} fintechs (FinCEN MSB), ${META.quarter}` +
+    (META.hasTrend ? ". Click any institution for detail; banks include 5-year trajectory." : ".");
   const states = [...new Set(DATA.map(r=>r.STALP).filter(Boolean))].sort();
   document.getElementById("state").innerHTML =
     '<option value="">All states</option>' + states.map(s=>`<option>${s}</option>`).join("");

@@ -125,6 +125,34 @@ Two aids sit in each bank's drill-down:
   are private/mutual), and Section 16 covers the board + principal officers, not
   every functional head — so it complements the LinkedIn link rather than replacing it.
 
+## Fintechs (FinCEN MSB registry)
+
+`09_fintech.py` builds a fintech target list from the **FinCEN MSB registrant
+list** (the federal registry of money services businesses, mirrored weekly by
+OpenSanctions). Universe = US **money transmitters** (activity 409) and
+**prepaid-access providers** (413/414) — the payment/lending fintechs with real
+BSA/AML burden. Signals are regulatory-footprint, not financial:
+
+| Signal | Rule | KR RAS service |
+|---|---|---|
+| **National transmitter** | money transmitter in 40+ states | BSA/AML program + testing; multistate MTL licensing |
+| **Full payments stack** | money transmitter **and** prepaid | Enterprise BSA/AML, testing, SOC/audit |
+| **Multistate transmitter** | money transmitter in 10–39 states | BSA/AML + state MTL compliance |
+| **Prepaid access** | provides/sells prepaid | BSA/AML + FinCEN prepaid rule; consumer compliance |
+| **FX / crypto** | currency dealer / FX dealer | BSA/AML for VC/FX transmission; OFAC |
+
+**Critical caveat (documented honestly).** FinCEN registration is **self-reported
+and cheap**, so real digital fintechs (PayPal, Stripe, Coinbase, Chime…) and shell
+registrations are **structurally identical** (branches = 0, "all 50 states") — no
+data field separates them. So this is **not a clean auto-ranked list**. Two
+mitigations: (1) a curated **"known fintech"** flag matches ~40 recognizable
+companies and floats them to the top (the `FINTECH` badge); (2) the full list is
+**name-searchable** so you can look up any specific target's regulatory footprint
+and RAS angle. The list is capped to the top ~1,500 by score (the long tail is
+shell-dominated). For a clean, comprehensive list, NMLS *state-licensed* money
+transmitters (state-approved, so shells can't fake it) would be the upgrade —
+it needs bulk-data access we haven't built.
+
 ### Known limits
 
 - **BSA/AML is a proxy.** Program adequacy isn't visible in Call Report ratios;
