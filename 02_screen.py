@@ -37,10 +37,13 @@ GROWTH_FAST = 0.15        # 15%+ YoY asset growth
 GROWTH_BSA = 0.20         # 20%+ growth -> BSA/AML scaling note
 NEAR_10B_LOW = 8_000_000  # $8B  (thousands)
 NEAR_10B_HIGH = 10_000_000  # $10B (thousands)
-# FDICIA Part 363 ICFR management/auditor attestation is triggered at $1B in
-# assets, so banks approaching or just past $1B are prime FDICIA prospects.
-FDICIA_LOW = 850_000      # $850M (thousands)
-FDICIA_HIGH = 1_150_000   # $1.15B (thousands)
+# FDICIA Part 363 thresholds — updated by FDIC final rule effective Jan 1, 2026:
+#   $1B  -> annual independent audit + audit-committee independence (was $500M)
+#   $5B  -> ICFR management assessment + auditor attestation (was $1B)
+FDICIA_1B_LOW = 850_000     # approaching/crossing $1B (thousands)
+FDICIA_1B_HIGH = 1_150_000
+FDICIA_5B_LOW = 4_250_000   # approaching/crossing $5B (thousands)
+FDICIA_5B_HIGH = 5_500_000
 UNDERRESERVED = 40.0      # allowance < 40% of noncurrent loans
 
 # Asset bands (in $thousands) for peer grouping.
@@ -58,10 +61,11 @@ SERVICE = {
     # --- Flagship: matches the empirical pre-enforcement financial profile ---
     "pre_enforcement":      (24, "KR RAS: PRE-ENFORCEMENT READINESS — risk assessment, Internal Audit, BSA/AML & remediation-readiness before regulators act"),
     # --- Strong KR RAS fits ---------------------------------------------
-    "near_10b_threshold":   (22, "KR RAS: $10B readiness — Consumer Compliance (CFPB), expanded BSA/AML, Internal Audit; FDICIA ICFR attestation"),
+    "near_10b_threshold":   (22, "KR RAS: $10B readiness — Consumer Compliance (CFPB), Durbin, expanded BSA/AML, Internal Audit, DFAST"),
     "bsa_aml_scaling":      (20, "KR RAS: BSA/AML program enhancement + independent testing (AML & Sanctions / OFAC)"),
-    "near_fdicia_1b":       (18, "KR RAS: FDICIA Part 363 ICFR attestation readiness + Internal Audit (approaching/crossing $1B)"),
-    "rapid_growth":         (18, "KR RAS: BSA/AML scaling, Internal Audit, enterprise risk assessment (Risk Intelligence Suite); FDICIA ICFR if crossing $1B"),
+    "near_fdicia_5b":       (20, "KR RAS: FDICIA Part 363 ICFR management assessment + auditor attestation (crossing $5B; threshold raised from $1B, effective 2026)"),
+    "near_fdicia_1b":       (18, "KR RAS: FDICIA Part 363 annual independent audit + audit-committee independence (crossing $1B; threshold raised from $500M, effective 2026)"),
+    "rapid_growth":         (18, "KR RAS: BSA/AML scaling, Internal Audit, enterprise risk assessment; FDICIA Part 363 audit if crossing $1B, ICFR if crossing $5B"),
     "credit_deterioration": (18, "KR RAS: Internal Audit loan review + CECL model validation + ALLL/CECL governance"),
     "weak_efficiency":      (15, "KR RAS: Robotic Process Automation (RPA) + Internal Audit process review"),
     "under_reserved":       (10, "KR RAS: CECL model validation / reserve adequacy review"),
@@ -147,9 +151,13 @@ def apply_signals(df):
         (df["ASSET"] >= NEAR_10B_LOW) & (df["ASSET"] < NEAR_10B_HIGH)
     )
 
-    # 6b. Approaching / just past the $1B FDICIA Part 363 ICFR trigger.
+    # 6b. Approaching / just past the $1B FDICIA Part 363 audit trigger (2026).
     sig["near_fdicia_1b"] = (
-        (df["ASSET"] >= FDICIA_LOW) & (df["ASSET"] < FDICIA_HIGH)
+        (df["ASSET"] >= FDICIA_1B_LOW) & (df["ASSET"] < FDICIA_1B_HIGH)
+    )
+    # 6c. Approaching / just past the $5B FDICIA Part 363 ICFR trigger (2026).
+    sig["near_fdicia_5b"] = (
+        (df["ASSET"] >= FDICIA_5B_LOW) & (df["ASSET"] < FDICIA_5B_HIGH)
     )
 
     # 7. Weak profitability: bottom of peer group or losing money.

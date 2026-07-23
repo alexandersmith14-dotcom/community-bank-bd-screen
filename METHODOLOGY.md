@@ -60,7 +60,8 @@ Suite. Weights favor genuinely RAS-sellable signals; signals that belong to a
 | **⚠ Pre-enforcement profile** *(flagship)* | matches ≥3 of 4: ROA bottom quartile, efficiency worst quartile, noncurrent/charge-offs worst quartile, brokered ≥10% of deposits | `ROA`,`EEFFR`,`NPERFV`,`NCLNLSR`,`BRO` | Pre-enforcement readiness — risk assessment, Internal Audit, BSA/AML, remediation (24) |
 | **Near $10B threshold** | assets between $8B and $10B | `ASSET` | $10B readiness — Consumer Compliance (CFPB), BSA/AML, Internal Audit; FDICIA ICFR attestation (22) |
 | **BSA/AML scaling** *(proxy)* | assets up ≥ 20% YoY | `ASSET` (YoY) | BSA/AML program enhancement + independent testing, OFAC (20) |
-| **Near $1B (FDICIA)** | assets between $850M and $1.15B | `ASSET` | FDICIA Part 363 ICFR attestation readiness + Internal Audit (18) |
+| **Near $1B (FDICIA audit)** | assets between $850M and $1.15B | `ASSET` | FDICIA Part 363 annual independent audit + audit-committee independence — crossing $1B (raised from $500M, effective 2026) (18) |
+| **Near $5B (FDICIA ICFR)** | assets between $4.25B and $5.5B | `ASSET` | FDICIA Part 363 ICFR mgmt assessment + auditor attestation — crossing $5B (raised from $1B, effective 2026) (20) |
 | **Rapid growth** | assets up ≥ 15% YoY | `ASSET` (YoY) | BSA/AML scaling, Internal Audit, risk assessment; FDICIA ICFR if crossing $1B (18) |
 | **Credit deterioration** | net charge-offs *or* noncurrent in worst 15% of band | `NCLNLSR`, `NPERFV` | Internal Audit loan review + **CECL model validation** + ALLL/CECL governance (18) |
 | **Weak efficiency** | efficiency ratio ≥ 70% **and** top 20% of band | `EEFFR` | Robotic Process Automation (RPA) + Internal Audit process review (15) |
