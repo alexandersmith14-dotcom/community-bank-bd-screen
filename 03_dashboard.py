@@ -122,6 +122,8 @@ TEMPLATE = r"""<!doctype html>
   .tile .k { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
   .tile .v { font-size:26px; font-weight:600; margin-top:4px; }
   .tile .s { color:var(--text-secondary); font-size:12px; }
+  .tile.clickable { cursor:pointer; transition:border-color .12s, transform .12s; }
+  .tile.clickable:hover { border-color:var(--series-1); transform:translateY(-1px); }
   .panel {
     background:var(--surface-1); border:1px solid var(--border); border-radius:10px;
     padding:16px; margin-bottom:16px;
@@ -358,13 +360,24 @@ function renderTiles(rows) {
   const aml = rows.filter(r=>has(r,"bsa_aml_scaling","rapid_growth","growth_accelerating")).length;
   const ten = rows.filter(r=>has(r,"near_10b_threshold","runway_to_10b")).length;
   const t = [
-    ["Banks in view", rows.length.toLocaleString(), "match current filters"],
-    ["3+ signals", ge3.toLocaleString(), "stacked RAS opportunities"],
-    ["AML / growth prospects", aml.toLocaleString(), "BSA/AML + Internal Audit"],
-    ["$10B-tier prospects", ten.toLocaleString(), "Consumer Compliance + IA readiness"],
+    ["Banks in view", rows.length.toLocaleString(), "click to reset all filters", "all"],
+    ["3+ signals", ge3.toLocaleString(), "stacked RAS opportunities", "ge3"],
+    ["AML / growth prospects", aml.toLocaleString(), "BSA/AML + Internal Audit", "aml"],
+    ["$10B-tier prospects", ten.toLocaleString(), "Consumer Compliance + IA readiness", "ten"],
   ];
   document.getElementById("tiles").innerHTML = t.map(x=>
-    `<div class="tile"><div class="k">${x[0]}</div><div class="v">${x[1]}</div><div class="s">${x[2]}</div></div>`).join("");
+    `<div class="tile clickable" onclick="tileAction('${x[3]}')" title="Apply this view">`+
+    `<div class="k">${x[0]}</div><div class="v">${x[1]}</div><div class="s">${x[2]}</div></div>`).join("");
+}
+
+function tileAction(key) {
+  const set = (id,v)=>document.getElementById(id).value=v;
+  if (key==="all") { resetAll(); return; }
+  if (key==="ge3") { selected.clear(); set("minsig","3"); set("mode","any"); }
+  if (key==="aml") { selected = new Set(["bsa_aml_scaling","rapid_growth","growth_accelerating"]); set("mode","any"); set("minsig","1"); }
+  if (key==="ten") { selected = new Set(["near_10b_threshold","runway_to_10b"]); set("mode","any"); set("minsig","1"); }
+  render();
+  window.scrollTo({top:document.querySelector('#tbl').offsetTop-80, behavior:'smooth'});
 }
 
 function renderChips(rows) {
