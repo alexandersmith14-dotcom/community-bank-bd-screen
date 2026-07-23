@@ -114,7 +114,10 @@ def extract_officers(cik, sub):
     for form, acc, doc in zip(forms, accs, docs):
         if form not in ("3", "4", "5") or not doc.lower().endswith(".xml"):
             continue
-        r = sget(ARCH.format(cik=cik, acc=acc.replace("-", ""), doc=doc))
+        # primaryDocument is often the XSLT-rendered view (xslF345.../rdgdoc.xml);
+        # the raw ownership XML (with <rptOwnerName>) is the same file at the root.
+        raw_doc = doc.split("/")[-1]
+        r = sget(ARCH.format(cik=cik, acc=acc.replace("-", ""), doc=raw_doc))
         n += 1
         if r is not None:
             xml = r.text
