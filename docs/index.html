@@ -54,6 +54,11 @@
     border-radius:8px; padding:7px 10px; font:inherit; min-width:150px;
   }
   .chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:2px; }
+  .chiplead { font-size:12px; color:var(--muted); margin:14px 2px 8px; }
+  #sigchips { display:flex; flex-direction:column; gap:12px; }
+  .chipgroup { display:grid; grid-template-columns:210px 1fr; gap:12px; align-items:start; }
+  .chipgroup-lab { font-size:11.5px; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:.03em; padding-top:6px; }
+  @media (max-width:640px){ .chipgroup { grid-template-columns:1fr; gap:4px; } .chipgroup-lab { padding-top:0; } }
   .chip {
     border:1px solid var(--baseline); background:var(--chip-bg); color:var(--text-secondary);
     border-radius:999px; padding:5px 12px; font-size:12.5px; cursor:pointer; user-select:none;
@@ -143,7 +148,8 @@
         </select>
       </div>
     </div>
-    <div class="chips" id="sigchips"></div>
+    <div class="chiplead">Filter by signal — grouped by the KR RAS service line each one feeds:</div>
+    <div id="sigchips"></div>
   </div>
 
   <div class="panel">
@@ -204,6 +210,16 @@ const SIGSERVICE = {
   capital_building:    "Refer — capital deployment / M&A (other KR practice)",
   weak_profitability:  "Refer — earnings / margin advisory (other KR practice)",
 };
+
+// Signal pills grouped under the KR RAS service line they feed.
+const CHIP_GROUPS = [
+  ["BSA/AML & Sanctions", ["bsa_aml_scaling","rapid_growth","growth_accelerating"]],
+  ["FDICIA / $10B readiness", ["near_fdicia_1b","near_10b_threshold","runway_to_10b"]],
+  ["Internal Audit & CECL (credit)", ["credit_deterioration","under_reserved","credit_turning"]],
+  ["Robotic Process Automation", ["weak_efficiency","margin_eroding"]],
+  ["Internal Audit — liquidity", ["funding_liquidity"]],
+  ["Refer — other KR practice", ["excess_capital","weak_profitability","capital_building"]],
+];
 
 const COLDEFS = [
   ["NAME","Bank",false], ["STALP","St",false], ["CITY","City",false],
@@ -274,9 +290,13 @@ function renderChips(rows) {
   const counts = {};
   SIGNALS.forEach(s=>counts[s[0]]=0);
   rows.forEach(r=>sigList(r).forEach(s=>{ if(s in counts) counts[s]++; }));
-  document.getElementById("sigchips").innerHTML = SIGNALS.map(s=>
-    `<span class="chip ${s[2]} ${selected.has(s[0])?"on":""}" onclick="toggle('${s[0]}')">${s[1]}<span class="n">${counts[s[0]]}</span></span>`
-  ).join("");
+  const cat = Object.fromEntries(SIGNALS.map(s=>[s[0], s[2]]));
+  document.getElementById("sigchips").innerHTML = CHIP_GROUPS.map(g=>{
+    const chips = g[1].map(k=>
+      `<span class="chip ${cat[k]} ${selected.has(k)?"on":""}" onclick="toggle('${k}')">${SIGLAB[k]}<span class="n">${counts[k]}</span></span>`
+    ).join("");
+    return `<div class="chipgroup"><div class="chipgroup-lab">${g[0]}</div><div class="chips">${chips}</div></div>`;
+  }).join("");
 }
 
 function renderBars(rows) {
