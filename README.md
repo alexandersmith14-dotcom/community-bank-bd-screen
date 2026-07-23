@@ -7,12 +7,17 @@ show a symptom that maps to an advisory service, with the stat to cite.
 ## Run it
 
 ```bash
-python 01_fetch.py     # downloads FDIC data into ./data  (needs internet)
-python 02_screen.py    # builds ./output/targets.csv      (offline, fast)
+python 01_fetch.py       # current-quarter FDIC snapshot  (needs internet)
+python 02_screen.py      # snapshot signals -> targets.csv + all_banks.csv
+python 04_history.py     # 20 quarters of history         (needs internet)
+python 05_trajectory.py  # 5-year trend features -> enriched targets.csv
+python 03_dashboard.py   # interactive dashboard (snapshot + trajectory)
 ```
 
-Re-tuning thresholds only needs step 2. Refreshing for a new quarter: update
-`CURRENT_REPDTE` / `PRIOR_REPDTE` in `01_fetch.py`, then run both.
+Dates auto-detect the latest quarter, so refreshing is just re-running. Re-tuning
+snapshot thresholds needs only step 2 (+5 if you want trends re-merged); trend
+thresholds live in `05_trajectory.py`. Steps 04/05 are optional — without them
+the dashboard still works as a pure snapshot.
 
 ## Output
 

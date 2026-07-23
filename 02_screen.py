@@ -175,6 +175,11 @@ def main():
     )
     ranked[out_cols].round(3).to_csv("output/targets.csv", index=False)
 
+    # Full scored universe (every bank, flagged or not) so the trajectory step
+    # can enrich all of them — including banks the snapshot didn't flag but whose
+    # trend is turning.
+    df[out_cols].round(3).to_csv("output/all_banks.csv", index=False)
+
     # per-signal counts
     summ = pd.DataFrame({
         "signal": signal_cols,

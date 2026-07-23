@@ -10,6 +10,7 @@ the ratios behind its flags.
 """
 
 import json
+import os
 import pandas as pd
 
 def current_repdte():
@@ -24,24 +25,44 @@ COLS = [
     "ROA_pct", "ROE", "NIMY", "EEFFR", "EEFFR_pct", "NCLNLSR", "NPERFV",
     "ELNANTR", "LNLSDEPR", "brokered_pct", "asset_growth_yoy",
 ]
+# Trajectory columns present only when 05_trajectory.py has run; embedded when found.
+TRAJ_COLS = [
+    "EQV_slope", "EQV_d2y", "ROA_slope", "asset_yoy", "asset_accel",
+    "runway_q", "n_quarters",
+]
 
 
 def main():
-    df = pd.read_csv("output/targets.csv")[COLS].copy()
+    raw = pd.read_csv("output/targets.csv")
+    cols = [c for c in COLS if c in raw.columns]
+    has_trend = all(c in raw.columns for c in TRAJ_COLS)
+    if has_trend:
+        cols = cols + TRAJ_COLS
+    df = raw[cols].copy()
     df["signals"] = df["signals"].fillna("")
     records = df.where(pd.notnull(df), None).to_dict(orient="records")
+
+    # Sparkline series (only for banks shown, to keep the file lean).
+    spark = {"quarters": [], "series": {}}
+    if os.path.exists("output/spark.json"):
+        full = json.load(open("output/spark.json"))
+        certs = {str(int(c)) for c in df["CERT"]}
+        spark = {"quarters": full["quarters"],
+                 "series": {k: v for k, v in full["series"].items() if k in certs}}
 
     rep = current_repdte()
     meta = {
         "quarter": f"Q{(int(rep[4:6]) - 1) // 3 + 1} {rep[:4]}",
         "date": f"{rep[4:6]}/{rep[:4]}",
         "flagged": len(df),
+        "hasTrend": has_trend,
     }
 
     html = (
         TEMPLATE
         .replace("/*__DATA__*/", json.dumps(records))
         .replace("/*__META__*/", json.dumps(meta))
+        .replace("/*__SPARK__*/", json.dumps(spark))
     )
     with open("output/dashboard.html", "w", encoding="utf-8") as f:
         f.write(html)
@@ -134,8 +155,18 @@ TEMPLATE = r"""<!doctype html>
   tbody tr:hover { background:color-mix(in srgb, var(--series-1) 7%, transparent); }
   .sigtags { display:flex; flex-wrap:wrap; gap:4px; white-space:normal; }
   .sigtag { font-size:11px; background:var(--chip-bg); border:1px solid var(--border); border-radius:5px; padding:1px 6px; color:var(--text-secondary); }
+  .chip.trend { border-style:dashed; }
+  .chip.trend.on { border-style:solid; }
   .detail td { background:var(--page); }
   .detail-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:10px 20px; padding:6px 2px; }
+  .trendhdr { margin:14px 2px 8px; font-size:13px; font-weight:600; }
+  .trendhdr .muted { font-weight:400; }
+  .muted { color:var(--muted); }
+  .sparkgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px 18px; padding:2px; }
+  .sparkbox { border:1px solid var(--border); border-radius:8px; padding:8px 10px; background:var(--surface-1); }
+  .sparklab { font-size:12px; color:var(--text-secondary); margin-bottom:4px; }
+  svg.spark { width:100%; height:30px; display:block; }
+  .sparkval { font-size:13px; font-variant-numeric:tabular-nums; margin-top:2px; }
   .metric { display:flex; justify-content:space-between; gap:10px; border-bottom:1px dotted var(--grid); padding:3px 0; }
   .metric .m { color:var(--text-secondary); }
   .metric .mv { font-variant-numeric:tabular-nums; }
@@ -210,17 +241,24 @@ TEMPLATE = r"""<!doctype html>
 <script>
 const DATA = /*__DATA__*/;
 const META = /*__META__*/;
+const SPARK = /*__SPARK__*/;
 
 const SIGNALS = [
-  ["excess_capital","Excess capital","opportunity"],
-  ["credit_deterioration","Credit deterioration","stress"],
-  ["under_reserved","Under-reserved","stress"],
-  ["weak_efficiency","Weak efficiency","stress"],
-  ["funding_liquidity","Funding / liquidity","stress"],
-  ["rapid_growth","Rapid growth","opportunity"],
-  ["near_10b_threshold","Approaching $10B","opportunity"],
-  ["weak_profitability","Weak profitability","stress"],
-  ["bsa_aml_scaling","BSA/AML scaling","stress"],
+  ["excess_capital","Excess capital","snapshot"],
+  ["credit_deterioration","Credit deterioration","snapshot"],
+  ["under_reserved","Under-reserved","snapshot"],
+  ["weak_efficiency","Weak efficiency","snapshot"],
+  ["funding_liquidity","Funding / liquidity","snapshot"],
+  ["rapid_growth","Rapid growth","snapshot"],
+  ["near_10b_threshold","Approaching $10B","snapshot"],
+  ["weak_profitability","Weak profitability","snapshot"],
+  ["bsa_aml_scaling","BSA/AML scaling","snapshot"],
+  // 5-year trajectory signals (direction of travel)
+  ["capital_building","Capital building ↗","trend"],
+  ["credit_turning","Credit turning ↗","trend"],
+  ["growth_accelerating","Growth accelerating ↗","trend"],
+  ["runway_to_10b","Runway to $10B","trend"],
+  ["margin_eroding","Margin eroding ↘","trend"],
 ];
 const SIGLAB = Object.fromEntries(SIGNALS.map(s => [s[0], s[1]]));
 
@@ -293,7 +331,7 @@ function renderChips(rows) {
   SIGNALS.forEach(s=>counts[s[0]]=0);
   rows.forEach(r=>sigList(r).forEach(s=>{ if(s in counts) counts[s]++; }));
   document.getElementById("sigchips").innerHTML = SIGNALS.map(s=>
-    `<span class="chip ${selected.has(s[0])?"on":""}" onclick="toggle('${s[0]}')">${s[1]}<span class="n">${counts[s[0]]}</span></span>`
+    `<span class="chip ${s[2]} ${selected.has(s[0])?"on":""}" onclick="toggle('${s[0]}')">${s[1]}<span class="n">${counts[s[0]]}</span></span>`
   ).join("");
 }
 
@@ -338,6 +376,33 @@ function renderTable(rows) {
   window._show = show;
 }
 
+// Tiny inline-SVG sparkline over the full quarter grid; nulls become gaps.
+function sparkline(vals, opts) {
+  opts = opts || {};
+  const W=120, H=30, pad=2;
+  const pts = vals.map((v,x)=>[x,v]).filter(p=>p[1]!==null && p[1]!==undefined);
+  if (pts.length < 2) return `<span class="muted">—</span>`;
+  const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]);
+  const x0=Math.min(...xs), x1=Math.max(...xs);
+  let y0=Math.min(...ys), y1=Math.max(...ys);
+  if (y0===y1){ y0-=1; y1+=1; }
+  const sx=x=>pad+(x-x0)/(x1-x0)*(W-2*pad);
+  const sy=y=>H-pad-(y-y0)/(y1-y0)*(H-2*pad);
+  const d=pts.map((p,k)=>(k?"L":"M")+sx(p[0]).toFixed(1)+" "+sy(p[1]).toFixed(1)).join(" ");
+  const last=pts[pts.length-1];
+  const col = opts.color || "var(--series-1)";
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">`+
+    `<path d="${d}" fill="none" stroke="${col}" stroke-width="1.5"/>`+
+    `<circle cx="${sx(last[0]).toFixed(1)}" cy="${sy(last[1]).toFixed(1)}" r="2.2" fill="${col}"/></svg>`;
+}
+
+function trendArrow(slope, goodUp) {
+  if (slope===null || slope===undefined || Number.isNaN(slope) || Math.abs(slope)<1e-6) return "";
+  const up = slope>0;
+  const cls = (up===goodUp) ? "gd" : "lo";
+  return `<span class="${cls}">${up?"↗":"↘"}</span>`;
+}
+
 function expand(i) {
   const r = window._show[i];
   const existing = document.querySelector(`tr.detail[data-for="${i}"]`);
@@ -355,11 +420,38 @@ function expand(i) {
     return `<div class="metric"><span class="m">${m[1]}</span><span class="${cls}">${fmt(r[m[0]],m[2],m[3])}</span></div>`;
   }).join("");
   const svc = sigList(r).map(s=>SIGLAB[s]).join(" · ");
+
+  // 5-year trajectory block (only if history is embedded for this bank)
+  let trendHtml = "";
+  const sp = SPARK.series[String(r.CERT)];
+  if (sp) {
+    const specs = [
+      ["Equity / assets", sp.eqv, r.EQV_slope, true, "%"],
+      ["ROA", sp.roa, r.ROA_slope, true, "%"],
+      ["Assets ($M)", sp.asset, r.asset_yoy, true, "n"],
+      ["Noncurrent / assets", sp.npf, null, false, "%"],
+    ];
+    const sparks = specs.map(s=>{
+      const arr = s[1]||[];
+      const last = [...arr].reverse().find(v=>v!==null && v!==undefined);
+      const val = last===undefined?"—":(s[4]==="%"?last.toFixed(2)+"%":Number(last).toLocaleString());
+      return `<div class="sparkbox"><div class="sparklab">${s[0]} ${trendArrow(s[2],s[3])}</div>`+
+        `${sparkline(arr)}<div class="sparkval">${val}</div></div>`;
+    }).join("");
+    const bits = [];
+    if (r.EQV_d2y!=null) bits.push(`capital ${r.EQV_d2y>=0?"+":""}${(+r.EQV_d2y).toFixed(1)} pts over 2yr`);
+    if (r.asset_yoy!=null) bits.push(`assets ${(r.asset_yoy*100).toFixed(0)}% YoY`);
+    if (fired.has("runway_to_10b") && r.runway_q!=null) bits.push(`~${Math.round(r.runway_q)} qtrs to $10B`);
+    if (r.n_quarters!=null) bits.push(`${r.n_quarters} quarters of data`);
+    trendHtml = `<div class="trendhdr">5-year trajectory <span class="muted">${bits.join(" · ")}</span></div>`+
+                `<div class="sparkgrid">${sparks}</div>`;
+  }
+
   const tr = document.createElement("tr");
   tr.className="detail"; tr.dataset.for=i;
   tr.innerHTML = `<td colspan="8"><div style="padding:4px 2px 10px">`+
     `<div style="color:var(--text-secondary);margin-bottom:8px">FDIC CERT ${r.CERT} &nbsp;•&nbsp; flagged: ${svc}</div>`+
-    `<div class="detail-grid">${cells}</div></div></td>`;
+    `<div class="detail-grid">${cells}</div>${trendHtml}</div></td>`;
   const rowEl = document.querySelector(`tr[data-i="${i}"]`);
   rowEl.after(tr);
 }
@@ -372,7 +464,8 @@ function resetAll(){ selected.clear(); document.getElementById("q").value="";
 
 function init(){
   document.getElementById("sub").textContent =
-    `${META.flagged.toLocaleString()} banks flagged of the U.S. community-bank universe (under $10B) — FDIC data, ${META.quarter}.`;
+    `${META.flagged.toLocaleString()} banks flagged of the U.S. community-bank universe (under $10B) — FDIC data, ${META.quarter}` +
+    (META.hasTrend ? ", with 5-year trend signals (click a bank for its trajectory)." : ".");
   const states = [...new Set(DATA.map(r=>r.STALP).filter(Boolean))].sort();
   document.getElementById("state").innerHTML =
     '<option value="">All states</option>' + states.map(s=>`<option>${s}</option>`).join("");

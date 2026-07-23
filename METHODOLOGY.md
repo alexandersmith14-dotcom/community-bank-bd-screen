@@ -67,6 +67,28 @@ earnings question. A bank can show both. So for a specific service line, filter
 `targets.csv` by that signal rather than only reading from the top. The score is
 an intensity/breadth proxy, not a "best prospect" ranking for any one service.
 
+## Trajectory signals (5-year, direction of travel)
+
+`04_history.py` pulls 20 quarters and `05_trajectory.py` turns them into trend
+features (OLS slope per year, 2-year change, growth acceleration, projected
+runway to $10B). These are layered *on top of* the snapshot signals — a bank can
+be flagged by a level, a trend, or both, and the combination is the point:
+"over-capitalized **and** still building capital" is a warmer call than either
+alone. Trend flags need ≥ 6 quarters of data.
+
+| Trajectory signal | Rule (default) | Maps to |
+|---|---|---|
+| **Capital building** | equity/assets rising ≥ 0.40 pts/yr **and** +0.75 pts over 2yr | Capital deployment (accumulating), M&A readiness |
+| **Credit turning** | charge-offs *or* noncurrent rising ≥ 0.15 pts/yr | Early credit review, CECL sensitivity |
+| **Growth accelerating** | assets ≥ 10% YoY **and** ≥ 3 pts faster than the prior year | Scaling risk infrastructure, growth-tier prep |
+| **Runway to $10B** | ≥ $5B now **and** projected to cross $10B within 12 quarters at current pace | $10B runway planning: Durbin, CFPB, DFAST |
+| **Margin eroding** | ROA falling ≤ −0.10 pts/yr **and** efficiency ratio rising ≥ 2.5 pts/yr | Earnings / margin turnaround advisory |
+
+Trajectory flags add to a bank's score and count alongside the snapshot signals.
+The dashboard shows each flagged bank's equity/assets, ROA, assets, and
+noncurrent trend as sparklines in its drill-down. Thresholds live at the top of
+`05_trajectory.py`.
+
 ### Known limits
 
 - **BSA/AML is a proxy.** Program adequacy isn't visible in Call Report ratios;
