@@ -582,8 +582,8 @@ function renderBars(rows) {
   const ordered = SIGNALS.slice().sort((a,b)=>counts[b[0]]-counts[a[0]]);
   document.getElementById("bars").innerHTML = ordered.map(s=>{
     const c = counts[s[0]], w = (c/max*100).toFixed(1);
-    return `<div class="barrow"><div class="lab">${s[1]}</div>`+
-           `<div class="bartrack"><div class="barfill" style="width:${w}%" title="${s[1]}: ${c} banks"></div></div>`+
+    return `<div class="barrow" data-tip="${esc(DESC[s[0]]||"")}"><div class="lab">${s[1]}</div>`+
+           `<div class="bartrack"><div class="barfill" style="width:${w}%"></div></div>`+
            `<div class="cnt">${c}</div></div>`;
   }).join("");
   document.getElementById("barnote").textContent = ` — within the ${rows.length.toLocaleString()} banks in view`;
@@ -605,7 +605,7 @@ function renderTable(rows) {
     `Showing ${show.length.toLocaleString()} of ${rows.length.toLocaleString()} banks` +
     (rows.length>cap?` (top ${cap} by current sort — narrow the filters to see the rest)`:"");
   document.getElementById("tbody").innerHTML = show.map((r,i)=>{
-    const tags = sigList(r).map(s=>`<span class="sigtag">${SIGLAB[s]||s}</span>`).join("");
+    const tags = sigList(r).map(s=>`<span class="sigtag" data-tip="${esc(DESC[s]||"")}">${SIGLAB[s]||s}</span>`).join("");
     const isBank = r.INST_TYPE==="Bank";
     const eg = isBank ? EDGAR[String(r.CERT)] : null;
     const pub = eg ? ` <span class="pub" title="Public — SEC registrant">${eg.ticker||"public"}</span>` : "";
@@ -684,7 +684,7 @@ function expand(i) {
   // KR RAS service mapping for each fired signal
   const svcRows = sigList(r).map(s=>{
     const refer = (SIGSERVICE[s]||"").startsWith("Refer");
-    return `<div class="svcrow"><span class="sigtag">${SIGLAB[s]||s}</span>`+
+    return `<div class="svcrow"><span class="sigtag" data-tip="${esc(DESC[s]||"")}">${SIGLAB[s]||s}</span>`+
            `<span class="svc ${refer?"refer":""}">${SIGSERVICE[s]||""}</span></div>`;
   }).join("");
 
