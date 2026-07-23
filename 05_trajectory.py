@@ -38,7 +38,7 @@ SERIES = ["ASSET", "EQV", "RBC1AAJ", "NCLNLSR", "NPERFV", "EEFFR", "ROA", "LNLSD
 # the snapshot map in 02_screen.py: RAS-sellable signals weighted up; non-RAS
 # tagged "Refer".
 TSERVICE = {
-    "runway_to_10b":        (20, "KR RAS: $10B runway — Consumer Compliance (CFPB), BSA/AML, Internal Audit; FDICIA/SOX ICFR attestation"),
+    "runway_to_10b":        (20, "KR RAS: $10B runway — Consumer Compliance (CFPB), BSA/AML, Internal Audit; FDICIA ICFR attestation"),
     "growth_accelerating":  (16, "KR RAS: BSA/AML scaling, Internal Audit, risk assessment; FDICIA ICFR readiness if crossing $1B"),
     "credit_turning":       (16, "KR RAS: early Internal Audit loan review + CECL model validation before losses surface"),
     "margin_eroding":       (10, "KR RAS (partial): RPA cost automation; broader margin advisory is another practice"),

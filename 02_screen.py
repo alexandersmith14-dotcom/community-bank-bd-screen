@@ -54,7 +54,7 @@ BAND_LABELS = ["<$250M", "$250M-$1B", "$1B-$3B", "$3B-$10B"]
 # different KR practice are kept visible but scored low and tagged "Refer".
 SERVICE = {
     # --- Strong KR RAS fits ---------------------------------------------
-    "near_10b_threshold":   (22, "KR RAS: $10B readiness — Consumer Compliance (CFPB), expanded BSA/AML, Internal Audit; FDICIA/SOX ICFR attestation"),
+    "near_10b_threshold":   (22, "KR RAS: $10B readiness — Consumer Compliance (CFPB), expanded BSA/AML, Internal Audit; FDICIA ICFR attestation"),
     "bsa_aml_scaling":      (20, "KR RAS: BSA/AML program enhancement + independent testing (AML & Sanctions / OFAC)"),
     "near_fdicia_1b":       (18, "KR RAS: FDICIA Part 363 ICFR attestation readiness + Internal Audit (approaching/crossing $1B)"),
     "rapid_growth":         (18, "KR RAS: BSA/AML scaling, Internal Audit, enterprise risk assessment (Risk Intelligence Suite); FDICIA ICFR if crossing $1B"),

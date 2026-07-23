@@ -51,7 +51,7 @@ Suite. Weights favor genuinely RAS-sellable signals; signals that belong to a
 
 | Signal | Rule (default) | FDIC fields | KR RAS service (weight) |
 |---|---|---|---|
-| **Near $10B threshold** | assets between $8B and $10B | `ASSET` | $10B readiness — Consumer Compliance (CFPB), BSA/AML, Internal Audit; FDICIA/SOX ICFR attestation (22) |
+| **Near $10B threshold** | assets between $8B and $10B | `ASSET` | $10B readiness — Consumer Compliance (CFPB), BSA/AML, Internal Audit; FDICIA ICFR attestation (22) |
 | **BSA/AML scaling** *(proxy)* | assets up ≥ 20% YoY | `ASSET` (YoY) | BSA/AML program enhancement + independent testing, OFAC (20) |
 | **Near $1B (FDICIA)** | assets between $850M and $1.15B | `ASSET` | FDICIA Part 363 ICFR attestation readiness + Internal Audit (18) |
 | **Rapid growth** | assets up ≥ 15% YoY | `ASSET` (YoY) | BSA/AML scaling, Internal Audit, risk assessment; FDICIA ICFR if crossing $1B (18) |
@@ -62,16 +62,10 @@ Suite. Weights favor genuinely RAS-sellable signals; signals that belong to a
 | **Excess capital** | equity/assets in top 20% of peer band | `EQV` | *Refer* — capital deployment / M&A (other KR practice); RAS angle = M&A compliance due diligence (5) |
 | **Weak profitability** | ROA in bottom 15% of band *or* negative | `ROA` | *Refer* — earnings / margin advisory (other KR practice); RAS angle = RPA cost automation (5) |
 
-Two standing services that aren't cleanly signal-derived:
-
-- **Cybersecurity / Digital Forensics & Incident Response** applies to essentially
-  every institution — a universal cross-sell.
-- **SOX ICFR (Section 404)** applies to *publicly traded* banks. Call Report data
-  does not indicate which banks are SEC registrants, so SOX can't be flagged from
-  this dataset alone; it rides along on the $1B+ / $10B ICFR-attestation signals
-  and needs an external public/private data point to target precisely. **FDICIA**
-  is the size-based analog (attestation at $1B) that *can* be flagged — see the
-  "Near $1B (FDICIA)" signal above.
+One standing service that isn't cleanly signal-derived: **Cybersecurity / Digital
+Forensics & Incident Response** applies to essentially every institution — a
+universal cross-sell. (ICFR attestation is captured via the size-based **FDICIA**
+signal at $1B — see "Near $1B (FDICIA)" above.)
 
 **Scoring.** Each matched signal carries a weight (see `SERVICE` in
 `02_screen.py`); a bank's `score` is the sum, and `n_signals` is the count.
@@ -96,7 +90,7 @@ alone. Trend flags need ≥ 6 quarters of data.
 
 | Trajectory signal | Rule (default) | KR RAS service (weight) |
 |---|---|---|
-| **Runway to $10B** | ≥ $5B now **and** projected to cross $10B within 12 quarters | $10B runway — Consumer Compliance (CFPB), BSA/AML, Internal Audit readiness (20) |
+| **Runway to $10B** | ≥ $5B now **and** projected to cross $10B within 12 quarters | $10B runway — Consumer Compliance (CFPB), BSA/AML, Internal Audit; FDICIA ICFR attestation (20) |
 | **Growth accelerating** | assets ≥ 10% YoY **and** ≥ 3 pts faster than the prior year | BSA/AML scaling + Internal Audit as growth outpaces controls (16) |
 | **Credit turning** | charge-offs *or* noncurrent rising ≥ 0.15 pts/yr | Early Internal Audit loan review / credit-risk controls (16) |
 | **Margin eroding** | ROA falling ≤ −0.10 pts/yr **and** efficiency rising ≥ 2.5 pts/yr | *(partial)* RPA cost automation; broader margin advisory is another practice (10) |

@@ -269,8 +269,8 @@ const SIGLAB = Object.fromEntries(SIGNALS.map(s => [s[0], s[1]]));
 
 // Signal -> KR Risk Advisory Services line (kept in step with the Python maps).
 const SIGSERVICE = {
-  near_10b_threshold:  "$10B readiness — Consumer Compliance (CFPB), BSA/AML, Internal Audit; FDICIA/SOX ICFR attestation",
-  runway_to_10b:       "$10B runway — Consumer Compliance, BSA/AML, Internal Audit; FDICIA/SOX ICFR attestation",
+  near_10b_threshold:  "$10B readiness — Consumer Compliance (CFPB), BSA/AML, Internal Audit; FDICIA ICFR attestation",
+  runway_to_10b:       "$10B runway — Consumer Compliance, BSA/AML, Internal Audit; FDICIA ICFR attestation",
   near_fdicia_1b:      "FDICIA Part 363 ICFR attestation readiness + Internal Audit (approaching/crossing $1B)",
   bsa_aml_scaling:     "BSA/AML program enhancement + independent testing",
   rapid_growth:        "BSA/AML scaling, Internal Audit, risk assessment; FDICIA ICFR if crossing $1B",
