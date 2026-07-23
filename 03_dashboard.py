@@ -186,6 +186,9 @@ TEMPLATE = r"""<!doctype html>
   .gd { color:var(--good); font-weight:600; }
   .count-note { color:var(--muted); font-size:12px; margin:4px 2px 10px; }
   a.reset { color:var(--series-1); cursor:pointer; font-size:12px; }
+  a.ldlink { display:inline-block; color:#fff; background:var(--series-1); text-decoration:none;
+             font-size:13px; font-weight:600; padding:7px 14px; border-radius:8px; }
+  a.ldlink:hover { filter:brightness(1.08); }
 </style>
 </head>
 <body>
@@ -307,6 +310,31 @@ const CHIP_GROUPS = [
   ["Internal Audit — liquidity", ["funding_liquidity"]],
   ["Refer — other KR practice", ["excess_capital","weak_profitability","capital_building"]],
 ];
+
+// Decision-maker titles to target on LinkedIn, by service-line group.
+const LD_TITLES = {
+  "BSA/AML & Sanctions": ["BSA Officer","Chief Compliance Officer","AML"],
+  "FDICIA / $10B readiness": ["Chief Financial Officer","Controller","Chief Risk Officer"],
+  "Internal Audit & CECL (credit)": ["Chief Audit Executive","Internal Audit","Chief Risk Officer","Chief Credit Officer"],
+  "Robotic Process Automation": ["Chief Operating Officer"],
+  "Internal Audit — liquidity": ["Treasurer","Chief Financial Officer"],
+  "Refer — other KR practice": ["President","Chief Executive Officer"],
+};
+
+// Build a LinkedIn people-search URL for this bank's relevant decision-makers.
+// Just a deep link into LinkedIn's normal search UI — the user reviews and
+// connects manually. No automation, no scraping.
+function linkedinSearch(r) {
+  const fired = new Set(sigList(r));
+  const titles = new Set(["Chief Executive Officer","President"]);
+  CHIP_GROUPS.forEach(g => {
+    if (g[1].some(k=>fired.has(k))) (LD_TITLES[g[0]]||[]).forEach(t=>titles.add(t));
+  });
+  const titleStr = [...titles].slice(0,6).map(t=>`"${t}"`).join(" OR ");
+  const kw = `"${r.NAME}" (${titleStr})`;
+  return { url: "https://www.linkedin.com/search/results/people/?keywords=" + encodeURIComponent(kw),
+           titles: [...titles].slice(0,6) };
+}
 
 const COLDEFS = [
   ["NAME","Bank",false], ["STALP","St",false], ["CITY","City",false],
@@ -521,9 +549,16 @@ function expand(i) {
 
   const tr = document.createElement("tr");
   tr.className="detail"; tr.dataset.for=i;
+  const ld = linkedinSearch(r);
+  const ldBlock =
+    `<div class="trendhdr">Reach the decision-makers</div>`+
+    `<a class="ldlink" href="${ld.url}" target="_blank" rel="noopener">Find decision-makers at ${r.NAME} on LinkedIn →</a>`+
+    `<div class="muted" style="font-size:12px;margin-top:4px">Targets: ${ld.titles.join(" · ")}. Opens a LinkedIn people search — review and connect manually.</div>`;
+
   tr.innerHTML = `<td colspan="8"><div style="padding:4px 2px 10px">`+
     `<div style="color:var(--text-secondary);margin-bottom:8px">FDIC CERT ${r.CERT}</div>`+
     `<div class="trendhdr">KR RAS services to pitch</div><div class="svcmap">${svcRows}</div>`+
+    ldBlock+
     `<div class="trendhdr">Financials</div><div class="detail-grid">${cells}</div>${trendHtml}</div></td>`;
   const rowEl = document.querySelector(`tr[data-i="${i}"]`);
   rowEl.after(tr);
