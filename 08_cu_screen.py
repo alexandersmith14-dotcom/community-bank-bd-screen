@@ -16,9 +16,13 @@ import pandas as pd
 
 PCTL_HIGH, PCTL_XHIGH, PCTL_LOW = 0.80, 0.85, 0.15
 LTS_ABS = 100.0            # loan-to-share stretched
-GROWTH_FAST, GROWTH_BSA = 0.15, 0.20
+# Credit unions grow far slower than banks (p90 ~11% YoY), so these sit below the
+# bank thresholds (15%/20%) to stay comparably selective.
+GROWTH_FAST, GROWTH_BSA = 0.10, 0.13
 NEAR_10B_LOW, NEAR_10B_HIGH = 8_000_000, 10_000_000        # thousands
-AUDIT_LOW, AUDIT_HIGH = 425_000, 575_000                    # $500M CPA audit trigger
+# With the $500M universe floor, this flags CUs that JUST crossed $500M and are
+# newly subject to the NCUA Part 715 CPA financial-statement audit.
+AUDIT_LOW, AUDIT_HIGH = 500_000, 650_000                    # thousands
 
 BAND_EDGES = [0, 250_000, 1_000_000, 3_000_000, 10 ** 12]
 BAND_LABELS = ["<$250M", "$250M-$1B", "$1B-$3B", "$3B+"]

@@ -4,7 +4,7 @@
 Unlike FDIC (a JSON API with pre-computed ratios), NCUA publishes quarterly bulk
 ZIPs of comma-delimited tables. This downloads the current and prior-year files,
 reads the three tables we need straight from the zip, computes bank-comparable
-ratios from the raw account codes, filters to >= $100M assets, and writes:
+ratios from the raw account codes, filters to >= $500M assets, and writes:
   data/cu_current.csv   identity + computed ratios (one row per credit union)
   data/cu_prior.csv     CU_NUMBER + assets one year earlier (for YoY growth)
 
@@ -14,12 +14,39 @@ to match the FDIC scale so banks and credit unions share the same asset bands.
 """
 
 import io
+import re
 import zipfile
 import requests
 import pandas as pd
 
 BASE = "https://ncua.gov/files/publications/analysis/call-report-data-{}.zip"
-ASSET_FLOOR = 100_000_000   # $100M in actual dollars
+ASSET_FLOOR = 500_000_000   # $500M in actual dollars (NCUA CPA-audit tier)
+
+STATE_ABBR = set("""AL AK AZ AR CA CO CT DE FL GA HI ID IL IN IA KS KY LA ME MD MA
+MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV
+WI WY DC PR VI GU""".split())
+KEEP_UPPER = {"FCU", "CU", "ECU", "SCU", "FSB", "US", "USA", "USX", "IBM", "ATT",
+              "AT&T", "UPS", "GE", "IH", "PSE", "NW", "NE", "SW", "SE", "II", "III"}
+
+
+def clean_cu_name(name):
+    """Title-case NCUA's all-caps names but keep acronyms, state codes, ordinals."""
+    out = []
+    for w in str(name).strip().split():
+        low = w.lower()
+        m = re.match(r"^(\d+)(st|nd|rd|th)$", low)
+        if m:
+            out.append(m.group(1) + m.group(2))          # 1ST -> 1st
+            continue
+        up = w.upper()
+        if up in STATE_ABBR or up in KEEP_UPPER:
+            out.append(up)
+            continue
+        if len(up) <= 5 and not any(v in low for v in "aeiouy"):
+            out.append(up)                                # BFG, HFS, SJP -> keep
+            continue
+        out.append(w.capitalize())
+    return " ".join(out)
 QUARTER_MONTHS = ["03", "06", "09", "12"]
 
 # Verified NCUA account codes (case normalized to upper on load).
@@ -97,7 +124,7 @@ def build_current(tag):
     assets = d[A_ASSETS]
     out = pd.DataFrame({
         "CU_NUMBER": d["CU_NUMBER"],
-        "NAME": d["CU_NAME"].str.strip().str.title(),
+        "NAME": d["CU_NAME"].apply(clean_cu_name),
         "CITY": d["CITY"].str.strip().str.title(),
         "STALP": d["STATE"],
         "ASSET": (assets / 1000).round(),                         # thousands, FDIC scale
@@ -119,7 +146,7 @@ def main():
 
     cur = build_current(tag)
     cur.to_csv("data/cu_current.csv", index=False)
-    print(f"  credit unions >= $100M: {len(cur):,}")
+    print(f"  credit unions >= $500M: {len(cur):,}")
 
     pri_tables = read_zip_tables(prior, ["FS220.txt"])
     pri = pri_tables["FS220.txt"][["CU_NUMBER", A_ASSETS]].copy()
