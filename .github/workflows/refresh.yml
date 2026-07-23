@@ -27,6 +27,7 @@ jobs:
       - run: python 06_edgar.py       # SEC EDGAR officers for public banks
       - run: python 07_cu_fetch.py    # NCUA credit-union data
       - run: python 08_cu_screen.py   # credit-union RAS targets
+      - run: python 10_cu_trajectory.py  # credit-union 5-year trajectory
       - run: python 09_fintech.py     # fintech (FinCEN MSB) RAS targets
       - run: python 03_dashboard.py   # dashboard (banks + credit unions + fintechs)
       - run: cp output/dashboard.html docs/index.html

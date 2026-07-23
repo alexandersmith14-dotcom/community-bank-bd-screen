@@ -71,6 +71,14 @@ def main():
         full = json.load(open("output/edgar_officers.json"))
         edgar = {k: v for k, v in full.items() if k in bank_certs}
 
+    cu_certs = {str(int(c)) for c, t in zip(df["CERT"], df["INST_TYPE"])
+                if t == "Credit Union" and pd.notnull(c)}
+    cu_spark = {"quarters": [], "series": {}}
+    if os.path.exists("output/cu_spark.json"):
+        full = json.load(open("output/cu_spark.json"))
+        cu_spark = {"quarters": full["quarters"],
+                    "series": {k: v for k, v in full["series"].items() if k in cu_certs}}
+
     rep = current_repdte()
     n_bank = int((df["INST_TYPE"] == "Bank").sum())
     n_cu = int((df["INST_TYPE"] == "Credit Union").sum())
@@ -91,6 +99,7 @@ def main():
         .replace("/*__META__*/", json.dumps(meta))
         .replace("/*__SPARK__*/", json.dumps(spark))
         .replace("/*__EDGAR__*/", json.dumps(edgar))
+        .replace("/*__CU_SPARK__*/", json.dumps(cu_spark))
     )
     with open("output/dashboard.html", "w", encoding="utf-8") as f:
         f.write(html)
@@ -213,6 +222,9 @@ TEMPLATE = r"""<!doctype html>
   .lo { color:var(--warn); font-weight:600; }
   .gd { color:var(--good); font-weight:600; }
   .count-note { color:var(--muted); font-size:12px; margin:4px 2px 10px; }
+  .ovgrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:22px; }
+  .ovh { font-size:12px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.03em; margin-bottom:8px; }
+  #overview .barrow { grid-template-columns:150px 1fr 40px; }
   a.reset { color:var(--series-1); cursor:pointer; font-size:12px; }
   #tip { position:fixed; z-index:1000; max-width:300px; background:var(--text-primary); color:var(--page);
          padding:8px 11px; border-radius:8px; font-size:12px; line-height:1.4; pointer-events:none;
@@ -240,6 +252,11 @@ TEMPLATE = r"""<!doctype html>
   </header>
 
   <div class="tiles" id="tiles"></div>
+
+  <div class="panel">
+    <h2>Overview / market map &nbsp; <a class="reset" onclick="toggleOverview()" id="ovtoggle">show ▾</a></h2>
+    <div id="overview" style="display:none"></div>
+  </div>
 
   <div class="panel">
     <h2>Filters &nbsp; <a class="reset" onclick="resetAll()">reset</a></h2>
@@ -298,7 +315,7 @@ TEMPLATE = r"""<!doctype html>
   </div>
 
   <div class="panel">
-    <h2>Target list</h2>
+    <h2>Target list &nbsp; <a class="reset" onclick="downloadCSV()">⬇ download this view (CSV)</a></h2>
     <div class="count-note" id="cnote"></div>
     <div class="tablewrap"><table id="tbl">
       <thead><tr id="hrow"></tr></thead>
@@ -312,6 +329,7 @@ const DATA = /*__DATA__*/;
 const META = /*__META__*/;
 const SPARK = /*__SPARK__*/;
 const EDGAR = /*__EDGAR__*/;
+const CU_SPARK = /*__CU_SPARK__*/;
 
 const SIGNALS = [
   ["excess_capital","Excess capital","snapshot"],
@@ -662,16 +680,29 @@ function expand(i) {
            `<span class="svc ${refer?"refer":""}">${SIGSERVICE[s]||""}</span></div>`;
   }).join("");
 
-  // 5-year trajectory block (banks only)
+  // 5-year trajectory block (banks and credit unions)
   let trendHtml = "";
-  const sp = isBank ? SPARK.series[String(r.CERT)] : null;
-  if (sp) {
-    const specs = [
+  let specs = null, bits = [];
+  if (isBank && SPARK.series[String(r.CERT)]) {
+    const sp = SPARK.series[String(r.CERT)];
+    specs = [
       ["Equity / assets", sp.eqv, r.EQV_slope, true, "%"],
       ["ROA", sp.roa, r.ROA_slope, true, "%"],
       ["Assets ($M)", sp.asset, r.asset_yoy, true, "n"],
       ["Noncurrent / assets", sp.npf, null, false, "%"],
     ];
+    if (r.EQV_d2y!=null) bits.push(`capital ${r.EQV_d2y>=0?"+":""}${(+r.EQV_d2y).toFixed(1)} pts over 2yr`);
+    if (r.asset_yoy!=null) bits.push(`assets ${(r.asset_yoy*100).toFixed(0)}% YoY`);
+    if (fired.has("runway_to_10b") && r.runway_q!=null) bits.push(`~${Math.round(r.runway_q)} qtrs to $10B`);
+  } else if (isCU && CU_SPARK.series[String(r.CERT)]) {
+    const sp = CU_SPARK.series[String(r.CERT)];
+    specs = [
+      ["Net worth ratio", sp.nw, null, true, "%"],
+      ["Assets ($M)", sp.assets, null, true, "n"],
+      ["Delinquency / loans", sp.delinq, null, false, "%"],
+    ];
+  }
+  if (specs) {
     const sparks = specs.map(s=>{
       const arr = s[1]||[];
       const last = [...arr].reverse().find(v=>v!==null && v!==undefined);
@@ -679,11 +710,6 @@ function expand(i) {
       return `<div class="sparkbox"><div class="sparklab">${s[0]} ${trendArrow(s[2],s[3])}</div>`+
         `${sparkline(arr)}<div class="sparkval">${val}</div></div>`;
     }).join("");
-    const bits = [];
-    if (r.EQV_d2y!=null) bits.push(`capital ${r.EQV_d2y>=0?"+":""}${(+r.EQV_d2y).toFixed(1)} pts over 2yr`);
-    if (r.asset_yoy!=null) bits.push(`assets ${(r.asset_yoy*100).toFixed(0)}% YoY`);
-    if (fired.has("runway_to_10b") && r.runway_q!=null) bits.push(`~${Math.round(r.runway_q)} qtrs to $10B`);
-    if (r.n_quarters!=null) bits.push(`${r.n_quarters} quarters of data`);
     trendHtml = `<div class="trendhdr">5-year trajectory <span class="muted">${bits.join(" · ")}</span></div>`+
                 `<div class="sparkgrid">${sparks}</div>`;
   }
@@ -724,6 +750,87 @@ function sortBy(k){ if(sortKey===k) sortDir*=-1; else {sortKey=k; sortDir=(k==="
 function resetAll(){ selected.clear(); document.getElementById("q").value="";
   ["state","band","svcline","itype"].forEach(id=>document.getElementById(id).value="");
   document.getElementById("minsig").value="1"; document.getElementById("mode").value="any"; render(); }
+
+function toggleOverview(){
+  const o=document.getElementById("overview"), t=document.getElementById("ovtoggle");
+  const show = o.style.display==="none";
+  o.style.display = show?"block":"none"; t.textContent = show?"hide ▴":"show ▾";
+  if (show && !o.dataset.done){ renderOverview(); o.dataset.done="1"; }
+}
+function renderOverview(){
+  const D=DATA, types=["Bank","Credit Union","Fintech"];
+  // type x priority
+  const rowsT = types.map(ty=>{
+    const rs=D.filter(r=>r.INST_TYPE===ty);
+    const hot=rs.filter(r=>priorityOf(r)==="Hot").length;
+    const warm=rs.filter(r=>priorityOf(r)==="Warm").length;
+    return `<tr><td>${ty}</td><td class="num">${rs.length.toLocaleString()}</td>`+
+      `<td class="num gd">${hot.toLocaleString()}</td><td class="num">${warm.toLocaleString()}</td></tr>`;
+  }).join("");
+  const typeTbl = `<table style="width:auto"><thead><tr><th>Type</th><th class="num">Total</th><th class="num">Hot</th><th class="num">Warm</th></tr></thead><tbody>${rowsT}</tbody></table>`;
+  // top states
+  const sc={}; D.forEach(r=>{ if(r.STALP) sc[r.STALP]=(sc[r.STALP]||0)+1; });
+  const top=Object.entries(sc).sort((a,b)=>b[1]-a[1]).slice(0,12);
+  const mx=Math.max(...top.map(x=>x[1]),1);
+  const stateBars=top.map(([s,c])=>`<div class="barrow"><div class="lab">${s}</div>`+
+    `<div class="bartrack"><div class="barfill" style="width:${(c/mx*100).toFixed(0)}%"></div></div><div class="cnt">${c}</div></div>`).join("");
+  // service-line group demand
+  const grp=CHIP_GROUPS.map(g=>[g[0], D.filter(r=>g[1].some(k=>sigList(r).includes(k))).length]).sort((a,b)=>b[1]-a[1]);
+  const gmx=Math.max(...grp.map(x=>x[1]),1);
+  const grpBars=grp.map(([n,c])=>`<div class="barrow"><div class="lab">${n}</div>`+
+    `<div class="bartrack"><div class="barfill" style="width:${(c/gmx*100).toFixed(0)}%"></div></div><div class="cnt">${c}</div></div>`).join("");
+  document.getElementById("overview").innerHTML =
+    `<div class="ovgrid">`+
+    `<div><div class="ovh">By type &amp; priority</div>${typeTbl}</div>`+
+    `<div><div class="ovh">Targets by state (top 12)</div>${stateBars}</div>`+
+    `<div><div class="ovh">Demand by KR RAS service line</div>${grpBars}</div></div>`;
+}
+
+function priorityOf(r){
+  if (r.INST_TYPE==="Fintech") return r.FT_KNOWN ? "Hot" : "Cool";
+  return r.n_signals>=3 ? "Hot" : r.n_signals===2 ? "Warm" : "Cool";
+}
+function keyMetricsOf(r){
+  const p=[];
+  if (r.INST_TYPE==="Fintech"){
+    if (r.FT_STATES!=null) p.push(`${r.FT_STATES} states of MSB activity`);
+    if (r.FT_ACTIVITIES) p.push(r.FT_ACTIVITIES);
+    return p.join("; ");
+  }
+  if (r.INST_TYPE==="Credit Union"){
+    if (r.NW_RATIO!=null) p.push(`net worth ${(+r.NW_RATIO).toFixed(1)}%`);
+    if (r.ROA!=null) p.push(`ROA ${(+r.ROA).toFixed(2)}%`);
+    if (r.DELINQ!=null) p.push(`delinquency ${(+r.DELINQ).toFixed(2)}%`);
+  } else {
+    if (r.EQV!=null) p.push(`equity/assets ${(+r.EQV).toFixed(1)}%`);
+    if (r.ROA!=null) p.push(`ROA ${(+r.ROA).toFixed(2)}%`);
+    if (r.EEFFR!=null) p.push(`efficiency ${(+r.EEFFR).toFixed(0)}%`);
+  }
+  if (r.asset_musd!=null) p.push(`assets $${(+r.asset_musd/1000).toFixed(1)}B`);
+  return p.join("; ");
+}
+function csvCell(v){ v=(v==null?"":String(v)); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
+function downloadCSV(){
+  const rows = DATA.filter(passes);
+  const cols = ["Institution Name","Institution Type","Priority","Priority Score",
+    "State","City","Assets ($B)","KR RAS Services","Signals","Key Metrics",
+    "LinkedIn Decision-Maker Search"];
+  const lines = [cols.join(",")];
+  rows.forEach(r=>{
+    const sg = sigList(r);
+    const services = [...new Set(sg.map(s=>SIGSERVICE[s]).filter(Boolean))].join("; ");
+    const labels = sg.map(s=>SIGLAB[s]||s).join("; ");
+    const assets = r.asset_musd!=null ? (+r.asset_musd/1000).toFixed(2) : "";
+    const rec = [r.NAME, r.INST_TYPE, priorityOf(r), r.score, r.STALP, r.CITY,
+      assets, services, labels, keyMetricsOf(r), linkedinSearch(r).url];
+    lines.push(rec.map(csvCell).join(","));
+  });
+  const blob = new Blob([lines.join("\n")], {type:"text/csv"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "bd_targets_filtered.csv";
+  a.click(); URL.revokeObjectURL(a.href);
+}
 
 function init(){
   document.getElementById("sub").textContent =
