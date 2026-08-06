@@ -20,6 +20,7 @@ Design notes
   cite. A human decides whether the story actually fits.
 """
 
+import os
 import numpy as np
 import pandas as pd
 
@@ -288,6 +289,7 @@ def assemble(df, signal_cols):
 
 
 def main():
+    os.makedirs("output", exist_ok=True)
     df = add_derived(load())
     df = add_regulators(df)
     df = add_percentiles(df)

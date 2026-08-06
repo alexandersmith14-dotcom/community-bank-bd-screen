@@ -10,6 +10,7 @@ Nothing here makes judgments about banks. It only downloads primary FDIC data
 so the screening step (02_screen.py) can run offline and be re-tuned freely.
 """
 
+import os
 import time
 import requests
 import pandas as pd
@@ -103,6 +104,7 @@ def fetch_all(endpoint, filters, fields):
 
 
 def main():
+    os.makedirs("data", exist_ok=True)
     resolve_dates()
     cap = ASSET_CAP_THOUSANDS
     # Universe = everything under the asset cap PLUS any bank FDIC officially
