@@ -193,9 +193,12 @@ TEMPLATE = r"""<!doctype html>
   .barfill { background:var(--series-1); height:100%; border-radius:0 4px 4px 0; min-width:2px; transition:width .2s; }
   .barrow .cnt { font-size:12.5px; font-variant-numeric:tabular-nums; color:var(--text-primary); }
   .tablewrap { overflow-x:auto; }
-  table { border-collapse:collapse; width:100%; font-variant-numeric:tabular-nums; }
-  th, td { text-align:left; vertical-align:top; padding:8px 10px; border-bottom:1px solid var(--grid); white-space:nowrap; }
-  td.reg { white-space:normal; max-width:160px; }
+  table { border-collapse:collapse; width:100%; table-layout:fixed; font-variant-numeric:tabular-nums; }
+  th, td { text-align:left; vertical-align:top; padding:8px 10px; border-bottom:1px solid var(--grid); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  td.reg, td:nth-child(1), td:nth-child(3) { white-space:normal; overflow:visible; text-overflow:clip; }
+  #hrow th:nth-child(1){width:16%} #hrow th:nth-child(2){width:4%} #hrow th:nth-child(3){width:10%}
+  #hrow th:nth-child(4){width:7%} #hrow th:nth-child(5){width:8%} #hrow th:nth-child(6){width:9%}
+  #hrow th:nth-child(7){width:18%} #hrow th:nth-child(8){width:28%}
   th { font-size:12px; color:var(--muted); cursor:pointer; user-select:none; position:sticky; top:0; background:var(--surface-1); }
   th.num, td.num { text-align:right; }
   tbody tr { cursor:pointer; }
