@@ -40,6 +40,22 @@ uses a **within-band percentile**. Bands:
 A bank at the 90th percentile for equity/assets is in the top 10% *of banks its
 own size*.
 
+## Regulators
+
+Every row carries who actually supervises the bank — useful for tailoring
+outreach (e.g. an OCC-regulated bank's BSA exam cadence differs from a
+state nonmember's) and for cross-checking enforcement history:
+
+- **`fed_regulator`** — primary federal prudential regulator, straight from
+  FDIC's `REGAGNT` field: `FDIC` (state nonmember banks), `OCC` (national
+  banks and federal savings associations), or `Federal Reserve` (state
+  member banks).
+- **`state_regulator`** — the state banking department, for state-chartered
+  banks only (`STCHRTR:1`). FDIC's own `CHRTAGNT` field just says `"STATE"`
+  with no agency name, so this is a static lookup by `STALP` maintained in
+  `02_screen.py` (`STATE_REGULATOR` dict). Federally chartered banks show
+  `"N/A (federally chartered)"`.
+
 ---
 
 ## Signals → service lines

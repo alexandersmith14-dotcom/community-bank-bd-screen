@@ -43,7 +43,9 @@ def resolve_dates():
     print(f"Using current={CURRENT_REPDTE}  prior={PRIOR_REPDTE}")
 
 # ---- Fields ----------------------------------------------------------------
-INST_FIELDS = ["CERT", "NAME", "CITY", "STALP", "BKCLASS", "ACTIVE"]
+INST_FIELDS = ["CERT", "NAME", "CITY", "STALP", "BKCLASS", "ACTIVE",
+               "REGAGNT",   # primary federal regulator: FDIC, OCC, or FED
+               "STCHRTR"]   # 1 = state-chartered (has a state regulator), 0 = federally chartered
 
 FIN_FIELDS = [
     "CERT", "REPDTE", "ASSET", "DEP", "NUMEMP",

@@ -24,6 +24,59 @@ import numpy as np
 import pandas as pd
 
 # --------------------------------------------------------------------------- #
+# Regulators
+# --------------------------------------------------------------------------- #
+# FDIC's REGAGNT gives the primary federal prudential regulator directly.
+FED_REGULATOR = {"FDIC": "FDIC", "OCC": "OCC", "FED": "Federal Reserve"}
+
+# FDIC's CHRTAGNT just says "STATE" (no agency name), so the actual state
+# banking department has to be a static lookup by STALP. Only fires when
+# STCHRTR == 1; federally chartered banks (national banks, federal savings
+# associations) have no state regulator.
+STATE_REGULATOR = {
+    "AL": "Alabama State Banking Department", "AK": "Alaska Division of Banking and Securities",
+    "AZ": "Arizona Department of Insurance and Financial Institutions", "AR": "Arkansas State Bank Department",
+    "CA": "California Department of Financial Protection and Innovation", "CO": "Colorado Division of Banking",
+    "CT": "Connecticut Department of Banking", "DE": "Delaware Office of the State Bank Commissioner",
+    "DC": "DC Department of Insurance, Securities and Banking", "FL": "Florida Office of Financial Regulation",
+    "GA": "Georgia Department of Banking and Finance", "HI": "Hawaii Division of Financial Institutions",
+    "ID": "Idaho Department of Finance", "IL": "Illinois Department of Financial and Professional Regulation",
+    "IN": "Indiana Department of Financial Institutions", "IA": "Iowa Division of Banking",
+    "KS": "Kansas Office of the State Bank Commissioner", "KY": "Kentucky Department of Financial Institutions",
+    "LA": "Louisiana Office of Financial Institutions", "ME": "Maine Bureau of Financial Institutions",
+    "MD": "Maryland Office of Financial Regulation", "MA": "Massachusetts Division of Banks",
+    "MI": "Michigan Department of Insurance and Financial Services", "MN": "Minnesota Department of Commerce",
+    "MS": "Mississippi Department of Banking and Consumer Finance", "MO": "Missouri Division of Finance",
+    "MT": "Montana Division of Banking and Financial Institutions", "NE": "Nebraska Department of Banking and Finance",
+    "NV": "Nevada Division of Financial Institutions", "NH": "New Hampshire Banking Department",
+    "NJ": "New Jersey Department of Banking and Insurance", "NM": "New Mexico Financial Institutions Division",
+    "NY": "New York State Department of Financial Services", "NC": "North Carolina Office of the Commissioner of Banks",
+    "ND": "North Dakota Department of Financial Institutions", "OH": "Ohio Division of Financial Institutions",
+    "OK": "Oklahoma State Banking Department", "OR": "Oregon Division of Financial Regulation",
+    "PA": "Pennsylvania Department of Banking and Securities", "RI": "Rhode Island Division of Banking",
+    "SC": "South Carolina Board of Financial Institutions", "SD": "South Dakota Division of Banking",
+    "TN": "Tennessee Department of Financial Institutions", "TX": "Texas Department of Banking",
+    "UT": "Utah Department of Financial Institutions", "VT": "Vermont Department of Financial Regulation",
+    "VA": "Virginia Bureau of Financial Institutions", "WA": "Washington Department of Financial Institutions",
+    "WV": "West Virginia Division of Financial Institutions", "WI": "Wisconsin Department of Financial Institutions",
+    "WY": "Wyoming Division of Banking", "PR": "Puerto Rico Office of the Commissioner of Financial Institutions",
+    "GU": "Guam Department of Revenue and Taxation - Banking", "VI": "U.S. Virgin Islands Banking Division",
+    "FM": "Federated States of Micronesia Banking Board",
+}
+
+
+def add_regulators(df):
+    df["fed_regulator"] = df["REGAGNT"].map(FED_REGULATOR).fillna(df["REGAGNT"])
+    is_state_chartered = pd.to_numeric(df["STCHRTR"], errors="coerce").fillna(0).astype(int) == 1
+    df["state_regulator"] = np.where(
+        is_state_chartered,
+        df["STALP"].map(STATE_REGULATOR).fillna("State-chartered (regulator not mapped for " + df["STALP"].astype(str) + ")"),
+        "N/A (federally chartered)",
+    )
+    return df
+
+
+# --------------------------------------------------------------------------- #
 # Tunable thresholds  --  edit these, re-run, no re-download needed.
 # --------------------------------------------------------------------------- #
 PCTL_HIGH = 0.80          # "top of peer group" cutoff
@@ -236,12 +289,14 @@ def assemble(df, signal_cols):
 
 def main():
     df = add_derived(load())
+    df = add_regulators(df)
     df = add_percentiles(df)
     df, signal_cols = apply_signals(df)
     df = assemble(df, signal_cols)
 
     out_cols = [
         "CERT", "NAME", "CITY", "STALP", "asset_band", "asset_musd",
+        "fed_regulator", "state_regulator",
         "n_signals", "score", "signals", "service_lines",
         # headline stats to cite in outreach
         "EQV", "EQV_pct", "RBC1AAJ", "RBCT1CER", "ROA", "ROA_pct", "ROE",

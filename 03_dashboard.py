@@ -20,7 +20,8 @@ def current_repdte():
         return "20260331"
 
 COLS = [
-    "CERT", "NAME", "CITY", "STALP", "asset_band", "asset_musd", "n_signals",
+    "CERT", "NAME", "CITY", "STALP", "asset_band", "asset_musd",
+    "fed_regulator", "state_regulator", "n_signals",
     "score", "signals", "EQV", "EQV_pct", "RBC1AAJ", "RBCT1CER", "ROA",
     "ROA_pct", "ROE", "NIMY", "EEFFR", "EEFFR_pct", "NCLNLSR", "NPERFV",
     "ELNANTR", "LNLSDEPR", "brokered_pct", "asset_growth_yoy",
@@ -487,6 +488,7 @@ function linkedinSearch(r) {
 const COLDEFS = [
   ["NAME","Bank",false], ["STALP","St",false], ["CITY","City",false],
   ["asset_musd","Assets $M",true], ["asset_band","Band",false],
+  ["fed_regulator","Fed reg.",false], ["state_regulator","State reg.",false],
   ["score","Score",true], ["n_signals","#",true], ["signals","Signals",false],
 ];
 const METRICS_BANK = [
@@ -533,6 +535,7 @@ function passes(r) {
   const q = document.getElementById("q").value.trim().toLowerCase();
   if (q) {
     const hay = [r.NAME, r.CITY, r.STALP, r.INST_TYPE, r.FT_DBA, r.FT_ACTIVITIES,
+      r.fed_regulator, r.state_regulator,
       sigList(r).map(s=>SIGLAB[s]||s).join(" ")].filter(Boolean).join(" ").toLowerCase();
     if (!q.split(/\s+/).every(t=>hay.includes(t))) return false;
   }
@@ -646,6 +649,7 @@ function renderTable(rows) {
     return `<tr onclick="expand(${i})" data-i="${i}">`+
       `<td>${r.NAME||""}${tag}${pub}</td><td>${r.STALP||""}</td><td>${r.CITY||""}</td>`+
       `<td class="num">${fmt(r.asset_musd,"num",0)}</td><td>${r.asset_band||""}</td>`+
+      `<td>${r.fed_regulator||""}</td><td>${r.state_regulator||""}</td>`+
       `<td class="num">${r.score}</td><td class="num">${r.n_signals}</td>`+
       `<td><div class="sigtags">${tags}</div></td></tr>`;
   }).join("");
@@ -775,8 +779,11 @@ function expand(i) {
   }
 
   const idLabel = isFT ? "FinCEN MSB registrant" : isCU ? `NCUA charter ${r.CERT}` : `FDIC CERT ${r.CERT}`;
-  tr.innerHTML = `<td colspan="8"><div style="padding:4px 2px 10px">`+
-    `<div style="color:var(--text-secondary);margin-bottom:8px">${idLabel}</div>`+
+  const regLabel = (r.fed_regulator || r.state_regulator)
+    ? ` &nbsp;·&nbsp; Federal regulator: ${r.fed_regulator||"—"} &nbsp;·&nbsp; State regulator: ${r.state_regulator||"—"}`
+    : "";
+  tr.innerHTML = `<td colspan="10"><div style="padding:4px 2px 10px">`+
+    `<div style="color:var(--text-secondary);margin-bottom:8px">${idLabel}${regLabel}</div>`+
     `<div class="trendhdr">KR RAS services to pitch</div><div class="svcmap">${svcRows}</div>`+
     ldBlock+egBlock+
     `<div class="trendhdr">${detailHdr}</div><div class="detail-grid">${cells}</div>${trendHtml}</div></td>`;
@@ -785,7 +792,7 @@ function expand(i) {
 }
 
 function toggle(s){ selected.has(s)?selected.delete(s):selected.add(s); render(); }
-function sortBy(k){ if(sortKey===k) sortDir*=-1; else {sortKey=k; sortDir=(k==="NAME"||k==="CITY"||k==="STALP"||k==="asset_band")?1:-1;} render(); }
+function sortBy(k){ if(sortKey===k) sortDir*=-1; else {sortKey=k; sortDir=(k==="NAME"||k==="CITY"||k==="STALP"||k==="asset_band"||k==="fed_regulator"||k==="state_regulator")?1:-1;} render(); }
 function resetAll(){ selected.clear(); bandSel.clear(); renderBandChips();
   document.getElementById("q").value="";
   ["state","svcline","itype"].forEach(id=>document.getElementById(id).value="");
