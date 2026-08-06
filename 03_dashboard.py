@@ -194,7 +194,8 @@ TEMPLATE = r"""<!doctype html>
   .barrow .cnt { font-size:12.5px; font-variant-numeric:tabular-nums; color:var(--text-primary); }
   .tablewrap { overflow-x:auto; }
   table { border-collapse:collapse; width:100%; font-variant-numeric:tabular-nums; }
-  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--grid); white-space:nowrap; }
+  th, td { text-align:left; vertical-align:top; padding:8px 10px; border-bottom:1px solid var(--grid); white-space:nowrap; }
+  td.reg { white-space:normal; max-width:160px; }
   th { font-size:12px; color:var(--muted); cursor:pointer; user-select:none; position:sticky; top:0; background:var(--surface-1); }
   th.num, td.num { text-align:right; }
   tbody tr { cursor:pointer; }
@@ -649,7 +650,7 @@ function renderTable(rows) {
     return `<tr onclick="expand(${i})" data-i="${i}">`+
       `<td>${r.NAME||""}${tag}${pub}</td><td>${r.STALP||""}</td><td>${r.CITY||""}</td>`+
       `<td class="num">${fmt(r.asset_musd,"num",0)}</td><td>${r.asset_band||""}</td>`+
-      `<td>${r.fed_regulator||""}</td><td>${r.state_regulator||""}</td>`+
+      `<td class="reg">${r.fed_regulator||""}</td><td class="reg">${r.state_regulator||""}</td>`+
       `<td class="num">${r.score}</td><td class="num">${r.n_signals}</td>`+
       `<td><div class="sigtags">${tags}</div></td></tr>`;
   }).join("");
