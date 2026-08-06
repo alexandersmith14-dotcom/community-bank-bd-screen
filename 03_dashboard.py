@@ -490,7 +490,7 @@ const COLDEFS = [
   ["NAME","Bank",false], ["STALP","St",false], ["CITY","City",false],
   ["asset_musd","Assets $M",true], ["asset_band","Band",false],
   ["fed_regulator","Fed reg.",false], ["state_regulator","State reg.",false],
-  ["score","Score",true], ["n_signals","#",true], ["signals","Signals",false],
+  ["signals","Signals",false],
 ];
 const METRICS_BANK = [
   ["EQV","Equity / assets","%",1], ["RBC1AAJ","Tier 1 leverage","%",1],
@@ -651,7 +651,6 @@ function renderTable(rows) {
       `<td>${r.NAME||""}${tag}${pub}</td><td>${r.STALP||""}</td><td>${r.CITY||""}</td>`+
       `<td class="num">${fmt(r.asset_musd,"num",0)}</td><td>${r.asset_band||""}</td>`+
       `<td class="reg">${r.fed_regulator||""}</td><td class="reg">${r.state_regulator||""}</td>`+
-      `<td class="num">${r.score}</td><td class="num">${r.n_signals}</td>`+
       `<td><div class="sigtags">${tags}</div></td></tr>`;
   }).join("");
   window._show = show;
