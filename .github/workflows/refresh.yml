@@ -7,6 +7,10 @@ on:
   schedule:
     - cron: "0 6 * * 1"   # Mondays 06:00 UTC
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "docs/**"   # avoid retriggering on the workflow's own publish commit
 
 permissions:
   contents: write
