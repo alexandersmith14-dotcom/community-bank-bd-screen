@@ -56,18 +56,6 @@ def main():
     cols = [c for c in dict.fromkeys(embed) if c in raw.columns]
     df = raw[cols].copy()
     df["signals"] = df["signals"].fillna("")
-
-    # Existing KR clients (manually curated) — flag as a signal so they're
-    # filterable/searchable like any other. No contact names here — this file
-    # is public; contact detail is delivered separately, not embedded.
-    if os.path.exists("kr_clients.csv"):
-        kr = pd.read_csv("kr_clients.csv")
-        kr_certs = set(kr["CERT"].astype(int))
-        is_client = df["CERT"].apply(lambda c: pd.notnull(c) and int(c) in kr_certs)
-        df.loc[is_client, "signals"] = df.loc[is_client, "signals"].apply(
-            lambda s: "; ".join(x for x in [s, "existing_client"] if x))
-        df.loc[is_client, "n_signals"] = df.loc[is_client, "n_signals"].fillna(0) + 1
-
     records = df.where(pd.notnull(df), None).to_dict(orient="records")
 
     # Bank CERTs only — sparklines and EDGAR are bank-side (avoid CU id collisions).
@@ -221,9 +209,6 @@ TEMPLATE = r"""<!doctype html>
   .chip.trend.on { border-style:solid; }
   .chip.flagship { border-color:var(--crit); color:var(--crit); font-weight:600; }
   .chip.flagship.on { background:var(--crit); color:#fff; border-color:var(--crit); }
-  .chip.client { border-color:var(--good); color:var(--good); font-weight:600; }
-  .chip.client.on { background:var(--good); color:#fff; border-color:var(--good); }
-  .clientbanner { border:1px solid var(--good); color:var(--good); border-radius:6px; padding:6px 10px; margin-bottom:10px; font-size:13px; font-weight:600; }
   .detail td { background:var(--page); }
   .detail-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:10px 20px; padding:6px 2px; }
   .svcmap { display:flex; flex-direction:column; gap:5px; padding:2px; }
@@ -351,7 +336,6 @@ const EDGAR = /*__EDGAR__*/;
 const CU_SPARK = /*__CU_SPARK__*/;
 
 const SIGNALS = [
-  ["existing_client","Existing KR client 🤝","client"],
   ["pre_enforcement","Pre-enforcement profile ⚠","flagship"],
   ["thin_cre_cushion","Thin CRE cushion ⚠","flagship"],
   ["cre_concentration","CRE ≥300% of capital","snapshot"],
@@ -386,7 +370,6 @@ const SIGLAB = Object.fromEntries(SIGNALS.map(s => [s[0], s[1]]));
 
 // Signal -> KR Risk Advisory Services line (kept in step with the Python maps).
 const SIGSERVICE = {
-  existing_client:     "Existing KR relationship — expansion / cross-sell, not a cold prospect",
   pre_enforcement:     "Pre-enforcement readiness — risk assessment, Internal Audit, BSA/AML & remediation readiness before regulators act",
   thin_cre_cushion:    "CRE stress testing + capital planning — a modest CRE loss would breach well-capitalized (reverse stress test)",
   cre_concentration:   "CRE loan review, credit risk review, CECL/ALLL, CRE stress testing (supervisory concentration criteria)",
@@ -418,7 +401,6 @@ const SIGSERVICE = {
 
 // Signal pills grouped under the KR RAS service line they feed.
 const CHIP_GROUPS = [
-  ["🤝 Existing KR relationship", ["existing_client"]],
   ["⚠ Pre-enforcement risk (flagship)", ["pre_enforcement"]],
   ["CRE concentration & stress testing", ["thin_cre_cushion","cre_concentration","cd_concentration","cre_growth_36m"]],
   ["BSA/AML & Sanctions", ["bsa_aml_scaling","rapid_growth","growth_accelerating"]],
@@ -432,7 +414,6 @@ const CHIP_GROUPS = [
 
 // Plain-language criteria shown on hover.
 const DESC = {
-  existing_client: "Already an active Kaufman Rossin client (from the BD team's Salesforce export) — an expansion/cross-sell conversation, not a cold pitch.",
   thin_cre_cushion: "Reverse stress test: the bank's capital cushion above well-capitalized would be wiped out by a CRE loss of 10% or less.",
   cre_concentration: "CRE (construction + multifamily + non-owner-occupied) is 300%+ of total risk-based capital — the supervisory concentration criteria.",
   cd_concentration: "Construction & development loans are 100%+ of total risk-based capital — the supervisory concentration criteria.",
@@ -462,7 +443,6 @@ const DESC = {
   ft_fx_crypto: "Currency dealer / FX — often crypto or cross-border; heavy BSA/AML and sanctions exposure.",
 };
 const GROUP_DESC = {
-  "🤝 Existing KR relationship": "Already a KR client per the BD team's Salesforce export — cross-referenced by institution name/CERT. An expansion conversation, not a cold prospect.",
   "CRE concentration & stress testing": "KR RAS: CRE loan review, credit risk review, CECL/ALLL, and CRE stress testing / capital planning — driven by the interagency CRE concentration criteria and a reverse stress test on public data.",
   "⚠ Pre-enforcement risk (flagship)": "KR RAS: banks whose financials match the empirical pattern ~1 year before an OCC/Fed enforcement order — a warm, specific reason to get ahead of it (risk assessment, Internal Audit, BSA/AML, remediation readiness).",
   "BSA/AML & Sanctions": "KR RAS: BSA/AML program build & independent testing, OFAC/sanctions.",
@@ -805,11 +785,7 @@ function expand(i) {
   const regLabel = (r.fed_regulator || r.state_regulator)
     ? ` &nbsp;·&nbsp; Federal regulator: ${r.fed_regulator||"—"} &nbsp;·&nbsp; State regulator: ${r.state_regulator||"—"}`
     : "";
-  const clientBlock = fired.has("existing_client")
-    ? `<div class="clientbanner">🤝 Existing KR client</div>`
-    : "";
-  tr.innerHTML = `<td colspan="8"><div style="padding:4px 2px 10px">`+
-    clientBlock+
+  tr.innerHTML = `<td colspan="10"><div style="padding:4px 2px 10px">`+
     `<div style="color:var(--text-secondary);margin-bottom:8px">${idLabel}${regLabel}</div>`+
     `<div class="trendhdr">KR RAS services to pitch</div><div class="svcmap">${svcRows}</div>`+
     ldBlock+egBlock+
