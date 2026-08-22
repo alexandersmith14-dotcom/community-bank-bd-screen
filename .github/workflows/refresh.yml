@@ -1,8 +1,10 @@
 name: Refresh dashboard
 
-# Rebuilds the target list + dashboard from the latest FDIC data and publishes
-# it to GitHub Pages. Runs weekly (FDIC data changes quarterly, so most runs are
-# no-ops) and on demand from the Actions tab.
+# Rebuilds the target list + dashboard from the latest FDIC data, publishes the
+# dashboard to GitHub Pages, and commits the output CSVs (targets, all_banks,
+# salesforce_import, signal_summary, cu/ft variants) so they stay in sync. Runs
+# weekly (FDIC data changes quarterly, so most runs are no-ops) and on demand
+# from the Actions tab.
 on:
   schedule:
     - cron: "0 6 * * 1"   # Mondays 06:00 UTC
@@ -35,10 +37,11 @@ jobs:
       - run: python 09_fintech.py     # fintech (FinCEN MSB) RAS targets
       - run: python 03_dashboard.py   # dashboard (banks + credit unions + fintechs)
       - run: cp output/dashboard.html docs/index.html
-      - name: Commit if the dashboard changed
+      - name: Commit if the dashboard or output CSVs changed
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add docs/index.html
-          git diff --staged --quiet || git commit -m "Auto-refresh dashboard from latest FDIC data"
+          git add -f output/*.csv
+          git diff --staged --quiet || git commit -m "Auto-refresh dashboard + output CSVs from latest FDIC data"
           git push
