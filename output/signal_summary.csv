@@ -1,0 +1,16 @@
+signal,banks_flagged,service_line,weight
+funding_liquidity,956,KR RAS (partial): Internal Audit of liquidity/funding risk controls; ALM advisory is another practice,10
+excess_capital,821,Refer: capital deployment / M&A (other KR practice); RAS angle = M&A compliance due diligence,5
+weak_efficiency,805,KR RAS: Robotic Process Automation (RPA) + Internal Audit process review,15
+credit_deterioration,721,KR RAS: Internal Audit loan review + CECL model validation + ALLL/CECL governance,18
+weak_profitability,612,Refer: earnings / margin advisory (other KR practice); RAS angle = cost automation via RPA,5
+thin_cre_cushion,445,KR RAS: CRE stress testing + capital planning — reverse stress test shows a modest CRE loss breaches well-capitalized,22
+cre_concentration,397,"KR RAS: CRE loan review, credit risk review, CECL/ALLL, CRE stress testing (>=300% of capital — supervisory concentration criteria)",20
+under_reserved,396,KR RAS: CECL model validation / reserve adequacy review,10
+pre_enforcement,390,"KR RAS: PRE-ENFORCEMENT READINESS — risk assessment, Internal Audit, BSA/AML & remediation-readiness before regulators act",24
+rapid_growth,386,"KR RAS: BSA/AML scaling, Internal Audit, enterprise risk assessment; FDICIA Part 363 audit if crossing $1B, ICFR if crossing $5B",18
+cd_concentration,298,KR RAS: construction & development loan review + credit risk management (>=100% of capital — supervisory concentration criteria),20
+near_fdicia_1b,267,"KR RAS: FDICIA Part 363 annual independent audit + audit-committee independence (crossing $1B; threshold raised from $500M, effective 2026)",18
+bsa_aml_scaling,251,KR RAS: BSA/AML program enhancement + independent testing (AML & Sanctions / OFAC),20
+near_fdicia_5b,51,"KR RAS: FDICIA Part 363 ICFR management assessment + auditor attestation (crossing $5B; threshold raised from $1B, effective 2026)",20
+near_10b_threshold,41,"KR RAS: $10B readiness — Consumer Compliance (CFPB), Durbin, expanded BSA/AML, Internal Audit, DFAST",22
