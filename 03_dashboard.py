@@ -20,7 +20,8 @@ def current_repdte():
         return "20260331"
 
 COLS = [
-    "CERT", "NAME", "CITY", "STALP", "asset_band", "asset_musd",
+    "CERT", "NAME", "CITY", "STALP", "ZIP", "ADDRESS", "website",
+    "asset_band", "asset_musd",
     "fed_regulator", "state_regulator", "n_signals",
     "score", "signals", "EQV", "EQV_pct", "RBC1AAJ", "RBCT1CER", "ROA",
     "ROA_pct", "ROE", "NIMY", "EEFFR", "EEFFR_pct", "NCLNLSR", "NPERFV",
@@ -785,8 +786,16 @@ function expand(i) {
   const regLabel = (r.fed_regulator || r.state_regulator)
     ? ` &nbsp;·&nbsp; Federal regulator: ${r.fed_regulator||"—"} &nbsp;·&nbsp; State regulator: ${r.state_regulator||"—"}`
     : "";
+  const addrBits = [r.ADDRESS, [r.CITY, r.STALP].filter(Boolean).join(", "), r.ZIP].filter(Boolean).join(" · ");
+  const contactLabel = (addrBits || r.website)
+    ? `<div style="color:var(--text-secondary);margin-bottom:8px">`+
+      `${addrBits}${addrBits && r.website ? " &nbsp;·&nbsp; " : ""}`+
+      `${r.website ? `<a href="${r.website}" target="_blank" rel="noopener">${r.website.replace(/^https?:\/\//i,"")}</a>` : ""}`+
+      `</div>`
+    : "";
   tr.innerHTML = `<td colspan="10"><div style="padding:4px 2px 10px">`+
     `<div style="color:var(--text-secondary);margin-bottom:8px">${idLabel}${regLabel}</div>`+
+    contactLabel+
     `<div class="trendhdr">KR RAS services to pitch</div><div class="svcmap">${svcRows}</div>`+
     ldBlock+egBlock+
     `<div class="trendhdr">${detailHdr}</div><div class="detail-grid">${cells}</div>${trendHtml}</div></td>`;
@@ -864,7 +873,7 @@ function csvCell(v){ v=(v==null?"":String(v)); return /[",\n]/.test(v)?'"'+v.rep
 function downloadCSV(){
   const rows = DATA.filter(passes);
   const cols = ["Institution Name","Institution Type","Priority","Priority Score",
-    "State","City","Assets ($B)","KR RAS Services","Signals","Key Metrics",
+    "State","City","Street","Zip","Website","Assets ($B)","KR RAS Services","Signals","Key Metrics",
     "LinkedIn Decision-Maker Search","Description"];
   const lines = [cols.join(",")];
   rows.forEach(r=>{
@@ -876,6 +885,7 @@ function downloadCSV(){
     const desc = `${r.INST_TYPE} in ${r.CITY||""}, ${r.STALP||""}. Priority ${priorityOf(r)}. `+
       `Flagged for: ${labels}. KR RAS opportunities: ${services}. Key metrics: ${km}.`;
     const rec = [r.NAME, r.INST_TYPE, priorityOf(r), r.score, r.STALP, r.CITY,
+      r.ADDRESS||"", r.ZIP||"", r.website||"",
       assets, services, labels, km, linkedinSearch(r).url, desc];
     lines.push(rec.map(csvCell).join(","));
   });
