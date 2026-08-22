@@ -46,7 +46,8 @@ def resolve_dates():
 # ---- Fields ----------------------------------------------------------------
 INST_FIELDS = ["CERT", "NAME", "CITY", "STALP", "BKCLASS", "ACTIVE",
                "REGAGNT",   # primary federal regulator: FDIC, OCC, or FED
-               "STCHRTR"]   # 1 = state-chartered (has a state regulator), 0 = federally chartered
+               "STCHRTR",   # 1 = state-chartered (has a state regulator), 0 = federally chartered
+               "ZIP", "ADDRESS", "WEBADDR"]   # contact info for outreach
 
 FIN_FIELDS = [
     "CERT", "REPDTE", "ASSET", "DEP", "NUMEMP",

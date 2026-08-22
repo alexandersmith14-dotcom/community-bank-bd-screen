@@ -12,7 +12,7 @@ python export_salesforce.py
 ```
 
 Each row has: **Institution Name, Institution Type, Priority (Hot/Warm/Cool),
-Priority Score, State, City, Assets ($B), KR RAS Services** (what to pitch),
+Priority Score, State, City, Street, Zip, Website, Assets ($B), KR RAS Services** (what to pitch),
 **Signals** (why they're flagged), **Key Metrics** (the numbers to cite),
 **Public Ticker**, **Board / Executives** (real names for public banks),
 **LinkedIn Decision-Maker Search** (a link that opens the right people), and a
@@ -38,6 +38,9 @@ Priority Score, State, City, Assets ($B), KR RAS Services** (what to pitch),
    - `Institution Name` → **Account Name**
    - `State` → **Billing State/Province**
    - `City` → **Billing City**
+   - `Street` → **Billing Street**
+   - `Zip` → **Billing Zip/Postal Code**
+   - `Website` → **Website**
    - `Description` → **Account Description**
    Anything you don't have a field for, leave **unmapped** — it's fine. (If your
    admin later adds custom fields for Priority, Signals, KR RAS Services, etc.,

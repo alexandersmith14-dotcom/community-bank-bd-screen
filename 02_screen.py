@@ -21,6 +21,7 @@ Design notes
 """
 
 import os
+import re
 import numpy as np
 import pandas as pd
 
@@ -168,6 +169,12 @@ def add_derived(df):
     for c in num:
         df[c] = pd.to_numeric(df.get(c), errors="coerce")
 
+    # Outreach contact fields (ZIP/ADDRESS come straight from FDIC; WEBADDR needs
+    # a scheme normalized on since FDIC returns it bare or with an inconsistent one).
+    df["website"] = df["WEBADDR"].apply(
+        lambda w: f"https://{re.sub(r'^https?://', '', w, flags=re.I)}" if pd.notna(w) and w else None
+    )
+
     # --- CRE concentration (interagency guidance definition) ---
     df["TRBC"] = df["RBCT1J"].fillna(0) + df["RBCT2"].fillna(0)      # total risk-based capital
     df["CRE_TOTAL"] = (df["LNRECONS"].fillna(0) + df["LNREMULT"].fillna(0)
@@ -297,7 +304,8 @@ def main():
     df = assemble(df, signal_cols)
 
     out_cols = [
-        "CERT", "NAME", "CITY", "STALP", "asset_band", "asset_musd",
+        "CERT", "NAME", "CITY", "STALP", "ZIP", "ADDRESS", "website",
+        "asset_band", "asset_musd",
         "fed_regulator", "state_regulator",
         "n_signals", "score", "signals", "service_lines",
         # headline stats to cite in outreach
