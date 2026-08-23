@@ -151,15 +151,16 @@ def main():
     ft["NAME"] = ft["LEGAL NAME"].str.strip().str.title()
     ft["CITY"] = ft["CITY"].str.strip().str.title()
     ft["STALP"] = ft["STATE"]
+    ft["ADDRESS"] = ft["STREET ADDRESS"].str.strip().str.title()
     ft["FT_STATES"] = ft["nstates"]
     ft["FT_ACTIVITIES"] = ft["acts"].apply(lambda a: readable_acts(sorted(a)))
     ft["FT_BRANCHES"] = ft["branches"]
     ft["FT_DBA"] = ft["DBA NAME"].str.strip().str.title()
 
     ft["FT_KNOWN"] = ft["ft_known"]
-    out_cols = ["INST_TYPE", "CERT", "NAME", "CITY", "STALP", "n_signals",
-                "score", "signals", "FT_STATES", "FT_ACTIVITIES", "FT_BRANCHES",
-                "FT_DBA", "FT_KNOWN"]
+    out_cols = ["INST_TYPE", "CERT", "NAME", "CITY", "STALP", "ZIP", "ADDRESS",
+                "n_signals", "score", "signals", "FT_STATES", "FT_ACTIVITIES",
+                "FT_BRANCHES", "FT_DBA", "FT_KNOWN"]
     # Cap to the top targets by score. The full registry has ~21k MSBs, but the
     # long tail is shell-dominated and self-reported; the top slice keeps all the
     # recognizable fintechs (boosted) plus the highest-footprint transmitters and

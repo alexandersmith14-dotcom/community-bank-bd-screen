@@ -35,11 +35,12 @@ TRAJ_COLS = [
 ]
 # Credit-union financial columns (present only when 08_cu_screen.py has run).
 CU_COLS = [
+    "ZIP", "ADDRESS",
     "NW_RATIO", "NW_RATIO_pct", "DELINQ", "NCO", "LOAN_TO_SHARE",
     "EXP_RATIO", "MEMBERS",
 ]
 # Fintech columns (present only when 09_fintech.py has run).
-FT_COLS = ["FT_STATES", "FT_ACTIVITIES", "FT_BRANCHES", "FT_DBA", "FT_KNOWN"]
+FT_COLS = ["ZIP", "ADDRESS", "FT_STATES", "FT_ACTIVITIES", "FT_BRANCHES", "FT_DBA", "FT_KNOWN"]
 
 
 def main():

@@ -82,7 +82,8 @@ def main():
     df["CERT"] = df["CU_NUMBER"]
 
     out_cols = [
-        "INST_TYPE", "CERT", "NAME", "CITY", "STALP", "asset_band", "asset_musd",
+        "INST_TYPE", "CERT", "NAME", "CITY", "STALP", "ZIP", "ADDRESS",
+        "asset_band", "asset_musd",
         "n_signals", "score", "signals",
         "NW_RATIO", "NW_RATIO_pct", "DELINQ", "NCO", "LOAN_TO_SHARE", "ROA",
         "ROA_pct", "EXP_RATIO", "MEMBERS", "asset_growth_yoy",

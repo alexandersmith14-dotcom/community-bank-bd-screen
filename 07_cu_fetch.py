@@ -107,7 +107,8 @@ def num(s):
 
 def build_current(tag):
     t = read_zip_tables(tag, ["FOICU.txt", "FS220.txt", "FS220A.txt"])
-    ident = t["FOICU.txt"][["CU_NUMBER", "CU_NAME", "CITY", "STATE"]].copy()
+    ident = t["FOICU.txt"][["CU_NUMBER", "CU_NAME", "CITY", "STATE",
+                             "STREET", "ZIP_CODE"]].copy()
     fs, fsa = t["FS220.txt"], t["FS220A.txt"]
 
     cols_fs = [A_ASSETS, A_LOANS, A_SHARES_DEP, A_DELINQ, A_CHARGEOFF,
@@ -127,6 +128,8 @@ def build_current(tag):
         "NAME": d["CU_NAME"].apply(clean_cu_name),
         "CITY": d["CITY"].str.strip().str.title(),
         "STALP": d["STATE"],
+        "ADDRESS": d["STREET"].str.strip().str.title(),
+        "ZIP": d["ZIP_CODE"],
         "ASSET": (assets / 1000).round(),                         # thousands, FDIC scale
         "NW_RATIO": (d[A_NW] / assets * 100),                     # net worth / assets %
         "DELINQ": (d[A_DELINQ] / d[A_LOANS] * 100),               # delinquent / loans %
