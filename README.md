@@ -20,7 +20,9 @@ snapshot thresholds needs only step 2 (+5 if you want trends re-merged); trend
 thresholds live in `05_trajectory.py`. Steps 04/05/06 are optional — without them
 the dashboard still works as a pure snapshot. Step 06 (SEC EDGAR) adds verified
 board/executive names for the *public* banks and takes a few minutes (rate-limited
-to SEC's guidelines).
+to SEC's guidelines). Steps 07/08/10 (credit unions), 09 (fintechs), and 11
+(state-license cross-check for fintechs — run 09 first) are optional add-ons to
+the bank screen; `.github/workflows/refresh.yml` runs the full set weekly.
 
 ## Output
 
@@ -36,4 +38,8 @@ important caveats (BSA/AML is a proxy, it's point-in-time, peer bands are coarse
 
 ## Requirements
 
-Python 3 with `pandas` and `requests`.
+Python 3 with `pandas`, `requests`, and `numpy`. Steps 06/09 need nothing extra;
+step 11 (`11_state_licenses.py`, optional) additionally needs `pdfplumber`,
+`rapidfuzz`, `lxml`, `openpyxl`, and `playwright` (plus `playwright install
+chromium` once) -- it's the only step that scrapes non-API state government
+pages, so it's the one most likely to need a source fixed up over time.
