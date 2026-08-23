@@ -170,17 +170,27 @@ data field separates them. So this is **not a clean auto-ranked list**. Two
 mitigations: (1) a curated **"known fintech"** flag matches ~40 recognizable
 companies and floats them to the top (the `FINTECH` badge); (2) the full list is
 **name-searchable** so you can look up any specific target's regulatory footprint
-and RAS angle. The list is capped to the top ~1,500 by score (the long tail is
-shell-dominated). For a clean, comprehensive list, NMLS *state-licensed* money
-transmitters (state-approved, so shells can't fake it) would be the upgrade —
-it needs bulk-data access we haven't built.
+and RAS angle; (3) `11_state_licenses.py` cross-checks names against real state
+money-transmitter licensee rosters (state-approved, so shells can't fake it) —
+`ft_state_verified`. Only 5 states (FL/NC/MS/AK/MA) publish a usable bulk
+roster; NMLS Consumer Access itself would give full state coverage but its
+Terms of Use explicitly bans bulk copying and it's Cloudflare-protected, so
+it's deliberately not scraped — see `11_state_licenses.py`'s docstring. A
+no-match therefore means "not verified in one of these 5 states," never "not
+licensed anywhere." The list is capped to the top ~1,500 by score (the long
+tail is shell-dominated).
 
 ### Known limits
 
 - **BSA/AML is a proxy.** Program adequacy isn't visible in Call Report ratios;
   fast asset growth is only a hint that a program has to scale. Treat as a
   conversation starter, not evidence.
-- **Point-in-time.** One quarter. A trend (several quarters) is stronger signal
-  than a single reading; adding multi-quarter history is the natural next build.
+- **Point-in-time for fintech only.** Banks and credit unions get a real 5-year
+  trend (`05_trajectory.py` / `10_cu_trajectory.py`, from FDIC/NCUA quarterly
+  history) layered on top of the snapshot signals. Fintech has no equivalent:
+  FinCEN's MSB list is a live registry snapshot with no periodic financials to
+  build a trend from, so `09_fintech.py` only has point-in-time signals plus
+  the registration-age proxy (`ft_recent_filing` / `ft_stale_registration`,
+  see that file's NO TREND note).
 - **Peer bands are coarse.** Four size buckets. FFIEC's official UBPR peer
   groups are finer; these are a defensible approximation from primary data.
