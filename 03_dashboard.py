@@ -40,7 +40,7 @@ CU_COLS = [
     "EXP_RATIO", "MEMBERS",
 ]
 # Fintech columns (present only when 09_fintech.py has run).
-FT_COLS = ["ZIP", "ADDRESS", "FT_STATES", "FT_ACTIVITIES", "FT_BRANCHES", "FT_DBA", "FT_KNOWN"]
+FT_COLS = ["ZIP", "ADDRESS", "FT_STATES", "FT_ACTIVITIES", "FT_BRANCHES", "FT_DBA", "FT_KNOWN", "FT_FILED"]
 
 
 def main():
@@ -367,6 +367,8 @@ const SIGNALS = [
   ["ft_multistate","Multistate transmitter","fintech"],
   ["ft_prepaid","Prepaid access","fintech"],
   ["ft_fx_crypto","FX / crypto","fintech"],
+  ["ft_recent_filing","Recently filed/renewed","fintech"],
+  ["ft_stale_registration","Registration overdue for renewal","fintech"],
 ];
 const SIGLAB = Object.fromEntries(SIGNALS.map(s => [s[0], s[1]]));
 
@@ -399,6 +401,8 @@ const SIGSERVICE = {
   ft_multistate:       "BSA/AML program + independent testing; state MTL compliance (scaling)",
   ft_prepaid:          "BSA/AML + FinCEN prepaid-access rule compliance; consumer compliance",
   ft_fx_crypto:        "BSA/AML for virtual-currency / FX money transmission; OFAC/sanctions",
+  ft_stale_registration: "FinCEN MSB registration appears overdue for its mandatory 2-year renewal — possible compliance gap, BSA/AML program review",
+  ft_recent_filing:    "Recently filed/renewed FinCEN MSB registration — timely moment to pitch a BSA/AML program review",
 };
 
 // Signal pills grouped under the KR RAS service line they feed.
@@ -410,7 +414,7 @@ const CHIP_GROUPS = [
   ["Internal Audit & CECL (credit)", ["credit_deterioration","under_reserved","credit_turning"]],
   ["Robotic Process Automation", ["weak_efficiency","margin_eroding"]],
   ["Internal Audit — liquidity", ["funding_liquidity"]],
-  ["Fintech — BSA/AML & licensing", ["ft_national","ft_fullstack","ft_multistate","ft_prepaid","ft_fx_crypto"]],
+  ["Fintech — BSA/AML & licensing", ["ft_national","ft_fullstack","ft_multistate","ft_prepaid","ft_fx_crypto","ft_stale_registration","ft_recent_filing"]],
   ["Refer — other KR practice", ["excess_capital","weak_profitability","capital_building"]],
 ];
 
@@ -443,6 +447,8 @@ const DESC = {
   ft_multistate: "Money transmitter operating in 10–39 states — scaling multistate compliance.",
   ft_prepaid: "Provides or sells prepaid access (cards/stored value) — FinCEN prepaid-rule + BSA/AML.",
   ft_fx_crypto: "Currency dealer / FX — often crypto or cross-border; heavy BSA/AML and sanctions exposure.",
+  ft_stale_registration: "FinCEN registration must renew every 2 years (31 CFR 1022.380); this one's filing date is past that window.",
+  ft_recent_filing: "Filed or renewed its FinCEN MSB registration in the last 12 months — filing date, not company age (registration renews every 2 years).",
 };
 const GROUP_DESC = {
   "CRE concentration & stress testing": "KR RAS: CRE loan review, credit risk review, CECL/ALLL, and CRE stress testing / capital planning — driven by the interagency CRE concentration criteria and a reverse stress test on public data.",
@@ -705,6 +711,7 @@ function expand(i) {
       ["Branches / agents", fmt(r.FT_BRANCHES,"num",0)],
       ["Also does business as", r.FT_DBA || "—"],
       ["MSB activities", r.FT_ACTIVITIES || "—"],
+      ["FinCEN registration filed/renewed", r.FT_FILED || "—"],
     ];
     cells = rows.map(x=>`<div class="metric"><span class="m">${x[0]}</span><span class="mv">${x[1]}</span></div>`).join("");
   } else {

@@ -14,6 +14,15 @@ transmitter + prepaid), which is a better real-fintech indicator, and the
 dashboard's name search lets you pull specific known targets. Treat this as a
 filterable regulatory database, not a pre-cleaned ranked list.
 
+NO TREND: unlike banks/credit unions, FinCEN's MSB list is a live registry
+snapshot, not periodic financials -- there's no multi-quarter history to build
+a real trajectory from. RECEIVED DATE is the closest thing to a time signal,
+but MSB registration must be RENEWED every 2 years (31 CFR 1022.380), so a
+recent date means "filed or renewed," not "brand-new company" -- don't oversell
+it as a new-entrant flag. Two honest uses of it: recent filing/renewal is a
+natural outreach moment either way, and a registration well past the 2-year
+mark is a real compliance-gap signal.
+
 Writes output/ft_targets.csv (INST_TYPE=Fintech, shared schema + FT_ columns).
 """
 
@@ -85,9 +94,16 @@ SERVICE = {
     "ft_national":   (20, "KR RAS: BSA/AML program + independent testing; multistate money-transmitter licensing (40+ states)"),
     "ft_fullstack":  (18, "KR RAS: enterprise BSA/AML program, independent testing, SOC/audit (full payments stack)"),
     "ft_multistate": (16, "KR RAS: BSA/AML program + independent testing; state MTL compliance (scaling)"),
+    "ft_stale_registration": (16, "KR RAS: FinCEN MSB registration appears overdue for its mandatory 2-year renewal (31 CFR 1022.380) — possible compliance gap, BSA/AML program review"),
     "ft_prepaid":    (14, "KR RAS: BSA/AML + FinCEN prepaid-access rule compliance; consumer compliance"),
     "ft_fx_crypto":  (14, "KR RAS: BSA/AML for virtual-currency / FX money transmission; OFAC/sanctions"),
+    "ft_recent_filing": (8, "KR RAS: recently filed/renewed FinCEN MSB registration — timely moment to pitch a BSA/AML program review"),
 }
+
+# MSB registration must be renewed every 2 years; a grace window avoids flagging
+# filings that are merely a few weeks past the nominal 2-year mark.
+STALE_REGISTRATION_DAYS = 2 * 365 + 90
+RECENT_FILING_DAYS = 365
 
 
 def readable_acts(codes):
@@ -111,9 +127,12 @@ def main():
     df["prepaid"] = df["acts"].apply(lambda a: bool(a & {"413", "414"}))
     df["fx"] = df["acts"].apply(lambda a: bool(a & {"407", "415"}))
     df["branches"] = pd.to_numeric(df["# OF BRANCHES"], errors="coerce").fillna(0).astype(int)
+    df["received_date"] = pd.to_datetime(df["RECEIVED DATE"], format="%m/%d/%Y", errors="coerce")
 
     # fintech-relevant universe: US money transmitters and/or prepaid providers
     ft = df[df["is_us"] & (df["mt"] | df["prepaid"])].copy().reset_index(drop=True)
+
+    age_days = (pd.Timestamp.today().normalize() - ft["received_date"]).dt.days
 
     sig = {
         "ft_national":   ft["mt"] & (ft["nstates"] >= 40),
@@ -121,6 +140,8 @@ def main():
         "ft_prepaid":    ft["prepaid"],
         "ft_fullstack":  ft["mt"] & ft["prepaid"],
         "ft_fx_crypto":  ft["fx"] & (ft["mt"] | ft["prepaid"]),
+        "ft_recent_filing":     age_days.notna() & (age_days <= RECENT_FILING_DAYS),
+        "ft_stale_registration": age_days.notna() & (age_days > STALE_REGISTRATION_DAYS),
     }
     for k, v in sig.items():
         ft[k] = v.fillna(False).astype(bool)
@@ -156,11 +177,12 @@ def main():
     ft["FT_ACTIVITIES"] = ft["acts"].apply(lambda a: readable_acts(sorted(a)))
     ft["FT_BRANCHES"] = ft["branches"]
     ft["FT_DBA"] = ft["DBA NAME"].str.strip().str.title()
+    ft["FT_FILED"] = ft["received_date"].dt.strftime("%Y-%m-%d")
 
     ft["FT_KNOWN"] = ft["ft_known"]
     out_cols = ["INST_TYPE", "CERT", "NAME", "CITY", "STALP", "ZIP", "ADDRESS",
                 "n_signals", "score", "signals", "FT_STATES", "FT_ACTIVITIES",
-                "FT_BRANCHES", "FT_DBA", "FT_KNOWN"]
+                "FT_BRANCHES", "FT_DBA", "FT_KNOWN", "FT_FILED"]
     # Cap to the top targets by score. The full registry has ~21k MSBs, but the
     # long tail is shell-dominated and self-reported; the top slice keeps all the
     # recognizable fintechs (boosted) plus the highest-footprint transmitters and

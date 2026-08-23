@@ -26,7 +26,8 @@ SIGLAB = {
     "runway_to_10b": "Runway to $10B (trend)", "margin_eroding": "Margin eroding (trend)",
     "ft_national": "National money transmitter", "ft_fullstack": "Full payments stack",
     "ft_multistate": "Multistate transmitter", "ft_prepaid": "Prepaid access",
-    "ft_fx_crypto": "FX / crypto",
+    "ft_fx_crypto": "FX / crypto", "ft_recent_filing": "Recently filed/renewed",
+    "ft_stale_registration": "Registration overdue for renewal",
 }
 SIGSVC = {
     "near_10b_threshold": "$10B readiness (CFPB, Internal Audit, FDICIA ICFR)",
@@ -49,6 +50,8 @@ SIGSVC = {
     "ft_multistate": "BSA/AML + state MTL compliance",
     "ft_prepaid": "BSA/AML + FinCEN prepaid rule; consumer compliance",
     "ft_fx_crypto": "BSA/AML for virtual currency / FX; OFAC",
+    "ft_recent_filing": "BSA/AML program review (timely, recently filed/renewed)",
+    "ft_stale_registration": "BSA/AML program review (registration overdue for renewal)",
 }
 LD_TITLES = {
     "Bank": '"Chief Executive Officer" OR "President" OR "BSA Officer" OR "Chief Risk Officer" OR "Chief Audit Executive"',
@@ -90,6 +93,7 @@ def cu_metrics(r):
 def ft_metrics(r):
     p = [f"{int(r['FT_STATES'])} states of MSB activity"]
     if str(r.get("FT_ACTIVITIES")): p.append(str(r["FT_ACTIVITIES"]))
+    if pd.notnull(r.get("FT_FILED")): p.append(f"FinCEN filing/renewal {r['FT_FILED']}")
     return "; ".join(p)
 
 
