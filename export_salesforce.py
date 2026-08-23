@@ -28,6 +28,7 @@ SIGLAB = {
     "ft_multistate": "Multistate transmitter", "ft_prepaid": "Prepaid access",
     "ft_fx_crypto": "FX / crypto", "ft_recent_filing": "Recently filed/renewed",
     "ft_stale_registration": "Registration overdue for renewal",
+    "ft_state_verified": "State-licensed (verified)",
 }
 SIGSVC = {
     "near_10b_threshold": "$10B readiness (CFPB, Internal Audit, FDICIA ICFR)",
@@ -52,6 +53,7 @@ SIGSVC = {
     "ft_fx_crypto": "BSA/AML for virtual currency / FX; OFAC",
     "ft_recent_filing": "BSA/AML program review (timely, recently filed/renewed)",
     "ft_stale_registration": "BSA/AML program review (registration overdue for renewal)",
+    "ft_state_verified": "Confirmed real company via state licensing (stronger lead)",
 }
 LD_TITLES = {
     "Bank": '"Chief Executive Officer" OR "President" OR "BSA Officer" OR "Chief Risk Officer" OR "Chief Audit Executive"',
@@ -94,6 +96,7 @@ def ft_metrics(r):
     p = [f"{int(r['FT_STATES'])} states of MSB activity"]
     if str(r.get("FT_ACTIVITIES")): p.append(str(r["FT_ACTIVITIES"]))
     if pd.notnull(r.get("FT_FILED")): p.append(f"FinCEN filing/renewal {r['FT_FILED']}")
+    if str(r.get("FT_STATE_LICENSES", "")).strip(): p.append(f"state-licensed: {r['FT_STATE_LICENSES']}")
     return "; ".join(p)
 
 

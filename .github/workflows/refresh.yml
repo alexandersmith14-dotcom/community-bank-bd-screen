@@ -25,7 +25,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install pandas requests numpy
+      - run: pip install pandas requests numpy pdfplumber rapidfuzz playwright
+      - run: playwright install --with-deps chromium
       - run: python 01_fetch.py       # current-quarter snapshot
       - run: python 02_screen.py      # snapshot signals + all_banks.csv
       - run: python 04_history.py     # 20 quarters of history
@@ -35,6 +36,7 @@ jobs:
       - run: python 08_cu_screen.py   # credit-union RAS targets
       - run: python 10_cu_trajectory.py  # credit-union 5-year trajectory
       - run: python 09_fintech.py     # fintech (FinCEN MSB) RAS targets
+      - run: python 11_state_licenses.py  # cross-check fintechs vs real state MT rosters
       - run: python 03_dashboard.py   # dashboard (banks + credit unions + fintechs)
       - run: cp output/dashboard.html docs/index.html
       - name: Commit if the dashboard or output CSVs changed
