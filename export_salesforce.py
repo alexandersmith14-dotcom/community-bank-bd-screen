@@ -32,6 +32,8 @@ SIGLAB = {
     "deposit_share_rising": "Gaining deposit share (trend)",
     "deposit_share_declining": "Losing deposit share (trend)",
     "dominant_market_position": "Dominant local market",
+    "recent_acquirer": "Recent acquirer (M&A)",
+    "failed_bank_acquirer": "Acquired a failed bank",
 }
 SIGSVC = {
     "near_10b_threshold": "$10B readiness (CFPB, Internal Audit, FDICIA ICFR)",
@@ -60,6 +62,8 @@ SIGSVC = {
     "deposit_share_rising": "BSA/AML scaling, Internal Audit, risk assessment (gaining local deposit share)",
     "deposit_share_declining": "Refer: strategic / M&A advisory (other KR practice); RAS angle = RPA cost automation + risk assessment",
     "dominant_market_position": "Refer: M&A / de novo expansion advisory (other KR practice)",
+    "recent_acquirer": "BSA/AML scaling, Internal Audit, risk assessment (integrating an acquisition)",
+    "failed_bank_acquirer": "BSA/AML scaling, Internal Audit, risk assessment (absorbed a failed bank's book)",
 }
 LD_TITLES = {
     "Bank": '"Chief Executive Officer" OR "President" OR "BSA Officer" OR "Chief Risk Officer" OR "Chief Audit Executive"',

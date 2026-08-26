@@ -153,6 +153,28 @@ isn't a real market-position story. HHI itself isn't scored (a bank in a
 concentrated market isn't automatically a symptom either way) but is shown in
 the drill-down for context. Thresholds live at the top of `12_sod_market_share.py`.
 
+## Recent M&A activity (FDIC history / failures)
+
+`13_bank_events.py` flags banks that recently took on another institution's
+customers, loans, and staff — the BSA/AML program and Internal Audit function
+usually get stretched by the integration, which is a warm, unambiguous reason
+to call (this isn't a modeled judgment like the peer-percentile signals — it's
+"did the event happen").
+
+| Signal | Rule (default) | Source | KR RAS service (weight) |
+|---|---|---|---|
+| **Recent acquirer** | completed 1+ merger/acquisition in the last 36 months | FDIC `history` (`CHANGECODE:810`, `ACQ_CERT` ties directly to our CERT) | BSA/AML scaling, Internal Audit, risk assessment (14) |
+| **⚠ Acquired a failed bank** | won an FDIC-assisted failed-bank deal in the last 5 years | FDIC `failures` | BSA/AML scaling, Internal Audit, risk assessment — usually a compressed integration timeline (20) |
+
+**A data gap, handled the same way as the fintech list.** The `failures`
+endpoint only gives the winning bidder's name (`BIDNAME`), not a CERT, so
+that leg fuzzy-matches `BIDNAME` against `institutions.csv` the same way
+`11_state_licenses.py` matches fintech names against state license rosters
+(legal-suffix-stripped `token_sort_ratio` ≥ 88). Payout resolutions
+(`RESTYPE1 == "PO"`, FDIC pays depositors directly, nobody absorbs the book)
+are excluded. `history`'s merger leg needs no fuzzy matching — `ACQ_CERT` is
+a direct key.
+
 ## Reaching decision-makers
 
 Two aids sit in each bank's drill-down:

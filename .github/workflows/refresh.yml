@@ -32,6 +32,7 @@ jobs:
       - run: python 04_history.py     # 20 quarters of history
       - run: python 05_trajectory.py  # trend features -> enriched targets.csv
       - run: python 12_sod_market_share.py  # deposit market share / HHI (FDIC SOD)
+      - run: python 13_bank_events.py  # recent mergers + failed-bank acquisitions
       - run: python 06_edgar.py       # SEC EDGAR officers for public banks
       - run: python 07_cu_fetch.py    # NCUA credit-union data
       - run: python 08_cu_screen.py   # credit-union RAS targets

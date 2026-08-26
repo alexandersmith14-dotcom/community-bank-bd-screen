@@ -38,6 +38,11 @@ SOD_COLS = [
     "sod_primary_county", "sod_primary_state", "sod_market_share",
     "sod_market_share_prior", "sod_share_delta", "sod_market_hhi",
 ]
+# M&A event columns, present only when 13_bank_events.py has run.
+EVENT_COLS = [
+    "events_acquired_count", "events_acquired_names", "events_last_merger_date",
+    "failed_bank_name", "failed_bank_date", "failed_bank_deposits",
+]
 # Credit-union financial columns (present only when 08_cu_screen.py has run).
 CU_COLS = [
     "ZIP", "ADDRESS",
@@ -59,7 +64,7 @@ def main():
     raw = pd.concat(frames, ignore_index=True, sort=False)
 
     has_trend = all(c in raw.columns for c in TRAJ_COLS)
-    embed = ["INST_TYPE"] + COLS + CU_COLS + FT_COLS + (TRAJ_COLS if has_trend else []) + SOD_COLS
+    embed = ["INST_TYPE"] + COLS + CU_COLS + FT_COLS + (TRAJ_COLS if has_trend else []) + SOD_COLS + EVENT_COLS
     cols = [c for c in dict.fromkeys(embed) if c in raw.columns]
     df = raw[cols].copy()
     df["signals"] = df["signals"].fillna("")
@@ -364,6 +369,9 @@ const SIGNALS = [
   ["deposit_share_rising","Gaining deposit share ↗","snapshot"],
   ["deposit_share_declining","Losing deposit share ↘","snapshot"],
   ["dominant_market_position","Dominant local market","snapshot"],
+  // Recent M&A activity (FDIC history / failures)
+  ["recent_acquirer","Recent acquirer","snapshot"],
+  ["failed_bank_acquirer","Acquired a failed bank ⚠","snapshot"],
   // 5-year trajectory signals (direction of travel)
   ["capital_building","Capital building ↗","trend"],
   ["credit_turning","Credit turning ↗","trend"],
@@ -409,6 +417,8 @@ const SIGSERVICE = {
   deposit_share_rising: "BSA/AML scaling, Internal Audit, risk assessment — gaining local deposit market share faster than the market",
   deposit_share_declining: "Refer — strategic / M&A advisory (other KR practice); RAS angle = RPA cost automation + risk assessment before a sale or restructuring",
   dominant_market_position: "Refer — M&A / de novo expansion advisory (other KR practice); RAS angle = readiness review before further growth",
+  recent_acquirer:     "BSA/AML scaling, Internal Audit, risk assessment — integrating an acquired bank's customers, loans, and staff",
+  failed_bank_acquirer: "BSA/AML scaling, Internal Audit, risk assessment — absorbed a failed bank's book via an FDIC-assisted deal, usually on a compressed timeline",
   ft_national:         "BSA/AML program + independent testing; multistate money-transmitter licensing (40+ states)",
   ft_fullstack:        "Enterprise BSA/AML program, independent testing, SOC/audit (money transmitter + prepaid)",
   ft_multistate:       "BSA/AML program + independent testing; state MTL compliance (scaling)",
@@ -423,7 +433,7 @@ const SIGSERVICE = {
 const CHIP_GROUPS = [
   ["⚠ Pre-enforcement risk (flagship)", ["pre_enforcement"]],
   ["CRE concentration & stress testing", ["thin_cre_cushion","cre_concentration","cd_concentration","cre_growth_36m"]],
-  ["BSA/AML & Sanctions", ["bsa_aml_scaling","rapid_growth","growth_accelerating","deposit_share_rising"]],
+  ["BSA/AML & Sanctions", ["bsa_aml_scaling","rapid_growth","growth_accelerating","deposit_share_rising","recent_acquirer","failed_bank_acquirer"]],
   ["FDICIA / audit / $10B readiness", ["near_fdicia_1b","near_fdicia_5b","near_500m_audit","near_10b_threshold","runway_to_10b"]],
   ["Internal Audit & CECL (credit)", ["credit_deterioration","under_reserved","credit_turning"]],
   ["Robotic Process Automation", ["weak_efficiency","margin_eroding"]],
@@ -467,6 +477,8 @@ const DESC = {
   deposit_share_rising: "Gained 1+ point of deposit market share in its primary county over the last year (FDIC Summary of Deposits) — outgrowing local competitors.",
   deposit_share_declining: "Lost 1+ point of deposit market share in its primary county over the last year (FDIC Summary of Deposits) — losing local market position.",
   dominant_market_position: "Holds 25%+ of all FDIC-insured deposits in its primary county — a dominant local market position (FDIC Summary of Deposits).",
+  recent_acquirer: "Completed 1+ merger/acquisition in the last 36 months (FDIC structure-change history) — absorbed another bank's customers, loans, and staff.",
+  failed_bank_acquirer: "Won an FDIC-assisted failed-bank deal in the last 5 years (FDIC failures) — took on a failed bank's book, often on a compressed integration timeline.",
 };
 const GROUP_DESC = {
   "CRE concentration & stress testing": "KR RAS: CRE loan review, credit risk review, CECL/ALLL, and CRE stress testing / capital planning — driven by the interagency CRE concentration criteria and a reverse stress test on public data.",
@@ -794,6 +806,21 @@ function expand(i) {
                 `<div class="sparkgrid">${sparks}</div>`;
   }
 
+  // Recent M&A activity (FDIC history / failures)
+  let eventsBlock = "";
+  if (isBank && (fired.has("recent_acquirer") || fired.has("failed_bank_acquirer"))) {
+    const rows = [];
+    if (fired.has("failed_bank_acquirer")) {
+      rows.push(`<div class="offrow"><span class="offname">⚠ ${r.failed_bank_name}</span>`+
+        `<span class="offtitle">FDIC-assisted failure, ${r.failed_bank_date} · $${fmt(r.failed_bank_deposits,"num",0)}K deposits</span></div>`);
+    }
+    if (fired.has("recent_acquirer")) {
+      rows.push(`<div class="offrow"><span class="offname">${fmt(r.events_acquired_count,"num",0)} merger(s), last ${r.events_last_merger_date}</span>`+
+        `<span class="offtitle">${r.events_acquired_names||""}</span></div>`);
+    }
+    eventsBlock = `<div class="trendhdr">Recent M&A activity (FDIC)</div><div class="offlist">${rows.join("")}</div>`;
+  }
+
   const tr = document.createElement("tr");
   tr.className="detail"; tr.dataset.for=i;
   const ld = linkedinSearch(r);
@@ -830,7 +857,7 @@ function expand(i) {
     `<div style="color:var(--text-secondary);margin-bottom:8px">${idLabel}${regLabel}</div>`+
     contactLabel+
     `<div class="trendhdr">KR RAS services to pitch</div><div class="svcmap">${svcRows}</div>`+
-    ldBlock+egBlock+
+    ldBlock+egBlock+eventsBlock+
     `<div class="trendhdr">${detailHdr}</div><div class="detail-grid">${cells}</div>${trendHtml}</div></td>`;
   const rowEl = document.querySelector(`tr[data-i="${i}"]`);
   rowEl.after(tr);
