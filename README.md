@@ -23,10 +23,10 @@ snapshot thresholds needs only step 2 (+5 if you want trends re-merged); trend
 thresholds live in `05_trajectory.py`. Steps 04/05/06/12/13/14 are optional --
 without them the dashboard still works as a pure snapshot. Step 06 (SEC EDGAR)
 adds verified board/executive names for the *public* banks and takes a few
-minutes (rate-limited to SEC's guidelines). Steps 07/08/10 (credit unions), 09
-(fintechs), and 11 (state-license cross-check for fintechs — run 09 first) are
-optional add-ons to the bank screen; `.github/workflows/refresh.yml` runs the
-full set weekly.
+minutes (rate-limited to SEC's guidelines). Steps 07/08/10/15 (credit unions -- 15 is NCUA formal enforcement orders, run
+after 10), 09 (fintechs), and 11 (state-license cross-check for fintechs —
+run 09 first) are optional add-ons to the bank screen; `.github/workflows/
+refresh.yml` runs the full set weekly.
 
 **API key required from 2026-09-08.** `api.fdic.gov` (used by 01/02/04/12/13)
 requires an api.data.gov key starting that date. Set `FDIC_API_KEY` as an env

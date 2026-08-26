@@ -197,10 +197,10 @@ about as concrete a reason to call as exists in this whole tool.
 |---|---|---|
 | **⚠ Formal enforcement order** | named in a Cease and Desist / Consent Order / Formal Agreement / Written Agreement in the last 5 years, from FDIC, OCC, or the Fed | BSA/AML & Sanctions remediation, Internal Audit, independent testing — live compliance mandate (26) |
 
-**Covering only FDIC would structurally miss 36% of the universe.** Our
+**Covering only FDIC would structurally miss 36% of the universe.** Our bank
 institutions split roughly FDIC 64% / OCC 20% / Fed 16% by primary regulator
 (`REGAGNT`), and FDIC's own enforcement site only lists FDIC-supervised
-banks. So this pulls from all three:
+banks. So this pulls from all three (banks) plus a fourth (credit unions):
 
 - **FDIC** (`orders.fdic.gov`, "ED&O") — no public API; a Salesforce
   Experience Cloud site whose "Download All" button triggers a Salesforce
@@ -234,7 +234,7 @@ banks. So this pulls from all three:
   match candidate). Scope: Action containing "Written Agreement" (the Fed's
   consent-order equivalent), "Cease and Desist," or "Consent Order."
 
-All three normalize to the same shape and combine into one signal. A bank
+The three bank sources normalize to the same shape and combine into one signal. A bank
 matched in more than one source shows up correctly and isn't a bug — a
 Fed-regulated holding company can get its own Written Agreement independent
 of an FDIC or OCC order against the underlying bank, since the Fed
@@ -250,6 +250,22 @@ full scored universe (`all_banks.csv`), the same way `05_trajectory.py` adds
 banks whose trend alone qualifies them. If a bank's only reason for being on
 the list is an order that later ages past the 5-year window, it drops back
 off on the next refresh.
+
+**Credit unions: `15_cu_consent_orders.py`, same signal, NCUA's Administrative
+Orders.** NCUA publishes a plain static CSV (no Playwright needed, unlike
+FDIC/OCC) at `ncua.gov/sites/default/files/list_csv/administrative-orders.csv`.
+The file mixes individual actions (prohibitions against former employees —
+the large majority of rows) with institution-level orders and has no clean
+action-type or status column; the only reliable filter found is that on an
+institution-level row, the credit union's own name lands in **both** the
+`Institution` and `Relationship` columns identically. No RSSD/charter
+cross-reference exists, so matching is fuzzy against `cu_current.csv`'s
+`NAME`. **Verified against real data that this currently matches nothing**:
+every institution-level order in the last 5 years targets a credit union
+well under this tool's $500M screening floor (best fuzzy-match score across
+18 candidates was 78.6, below the 88 threshold used everywhere else) — kept
+as a safety net for the day a $500M+ credit union gets one, not a signal
+expected to fire regularly.
 
 ## Reaching decision-makers
 

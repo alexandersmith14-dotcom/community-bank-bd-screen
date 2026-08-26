@@ -463,7 +463,7 @@ const DESC = {
   cre_growth_36m: "Non-owner-occupied CRE grew 50%+ over the last 36 months — the growth leg of the CRE concentration guidance.",
   pre_enforcement: "Financials match banks in the year before an OCC/Fed enforcement order — weak earnings + high cost + weak asset quality + brokered funding (3+ of 4). See study/FINDINGS.md.",
   high_uninsured_deposits: "50%+ of deposits are uninsured, or worst 15% of size peers — the SVB/Signature/First Republic profile (healthy community banks typically run 20-40%).",
-  consent_order: "Named in a formal Cease and Desist / Consent Order / Formal Agreement / Written Agreement in the last 5 years, from whichever of FDIC, OCC, or the Federal Reserve is the bank's (or its holding company's) regulator — ground truth, not a modeled signal.",
+  consent_order: "Named in a formal Cease and Desist / Consent Order / Formal Agreement / Written Agreement / Administrative Order in the last 5 years, from FDIC, OCC, the Federal Reserve, or NCUA — ground truth, not a modeled signal.",
   ag_concentration: "Agricultural loans 10%+ of the book AND worst 15% of size peers — no interagency threshold like CRE, so this is peer-relative with an absolute floor.",
   excess_capital: "Equity/assets in the top 20% of its size peer group — well-capitalized, with a deployment question.",
   credit_deterioration: "Net charge-offs or noncurrent assets in the worst 15% of size peers.",
@@ -848,8 +848,9 @@ function expand(i) {
 
   // FDIC formal enforcement action (ED&O) — ground truth, shown separately
   let consentBlock = "";
-  if (isBank && fired.has("consent_order")) {
-    consentBlock = `<div class="trendhdr">⚠ Formal enforcement action (${r.consent_order_source})</div><div class="offlist">`+
+  if ((isBank || isCU) && fired.has("consent_order")) {
+    const src = isBank ? r.consent_order_source : "NCUA";
+    consentBlock = `<div class="trendhdr">⚠ Formal enforcement action (${src})</div><div class="offlist">`+
       `<div class="offrow"><span class="offname">${r.consent_order_title} · ${r.consent_order_date}</span>`+
       `<span class="offtitle">${r.consent_order_status}${r.consent_order_count>1?` · ${fmt(r.consent_order_count,"num",0)} orders in the last 5yr`:""}</span></div></div>`;
   }

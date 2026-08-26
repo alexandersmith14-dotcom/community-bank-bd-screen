@@ -36,11 +36,12 @@ jobs:
       - run: python 05_trajectory.py  # trend features -> enriched targets.csv
       - run: python 12_sod_market_share.py  # deposit market share / HHI (FDIC SOD)
       - run: python 13_bank_events.py  # recent mergers + failed-bank acquisitions
-      - run: python 14_consent_orders.py  # FDIC formal enforcement actions (ED&O)
+      - run: python 14_consent_orders.py  # formal enforcement orders (FDIC/OCC/Fed)
       - run: python 06_edgar.py       # SEC EDGAR officers for public banks
       - run: python 07_cu_fetch.py    # NCUA credit-union data
       - run: python 08_cu_screen.py   # credit-union RAS targets
       - run: python 10_cu_trajectory.py  # credit-union 5-year trajectory
+      - run: python 15_cu_consent_orders.py  # NCUA formal enforcement actions
       - run: python 09_fintech.py     # fintech (FinCEN MSB) RAS targets
       - run: python 11_state_licenses.py  # cross-check fintechs vs real state MT rosters
       - run: python 03_dashboard.py   # dashboard (banks + credit unions + fintechs)
@@ -52,4 +53,12 @@ jobs:
           git add docs/index.html
           git add -f output/*.csv
           git diff --staged --quiet || git commit -m "Auto-refresh dashboard + output CSVs from latest FDIC data"
-          git push
+          # This step only ever stages docs/index.html and output/*.csv, so a
+          # conflict here can only be on those deterministically-regenerated
+          # files -- safe to resolve by keeping this run's fresh output if a
+          # concurrent push (manual or another run) landed first.
+          for i in 1 2 3; do
+            git push && break
+            echo "Push rejected (racing another push), pulling and retrying ($i/3)..."
+            git pull --no-rebase --no-edit -X ours origin main
+          done

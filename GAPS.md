@@ -8,21 +8,21 @@ known about them. They belong here instead.
 
 ## 1. Coverage gaps
 
-### Credit unions get 9 signals; banks get 29
+### Credit unions get 10 signals; banks get 29
 `08_cu_screen.py`'s `SERVICE` dict has 9 entries (near_10b, bsa_aml_scaling,
 near_500m_audit, rapid_growth, credit_deterioration, weak_efficiency,
-funding_liquidity, excess_capital, weak_profitability). Banks have picked up
-20 more since: CRE concentration + reverse stress test, uninsured-deposit
-risk, ag concentration, deposit market share (SOD), M&A/failed-bank/charter
-events, and the multi-regulator consent-order signal. None of those have a
-credit-union equivalent, and several could:
+funding_liquidity, excess_capital, weak_profitability), plus `consent_order`
+as of `15_cu_consent_orders.py`. Banks have picked up 19 more since: CRE
+concentration + reverse stress test, uninsured-deposit risk, ag
+concentration, deposit market share (SOD), M&A/failed-bank/charter events.
+None of those have a credit-union equivalent, and some could:
 
-- **NCUA issues its own formal enforcement actions** (Cease & Desist,
-  Prohibition, Civil Money Penalty — "Administrative Orders"), searchable at
-  `ncua.gov/news/enforcement-actions/administrative-orders` by name,
-  institution, city, state, and year. Confirmed to exist during this audit,
-  not yet checked for bulk/API access. This is the direct CU analog of
-  `14_consent_orders.py` and is not built.
+- ~~NCUA issues its own formal enforcement actions~~ — **done**,
+  `15_cu_consent_orders.py`. NCUA's Administrative Orders CSV is plain and
+  static (no Playwright needed), but verified against real data that every
+  institution-level order in the last 5 years targets a credit union well
+  under the $500M screening floor — matches nothing today, kept as a safety
+  net. See METHODOLOGY.md for the full writeup.
 - **SOD-equivalent deposit/share concentration** — NCUA doesn't publish an
   SOD equivalent as far as investigated; would need research, not assumed
   buildable.
@@ -72,6 +72,18 @@ still exits 0, and the Action still shows green. This already happened once
 (the NC/MA `lxml`/`openpyxl` CI-dependency gap from 2026-08-22 — the run
 "succeeded" with 3/5 state sources instead of 5/5, caught only by manually
 reading the CI log line by line, not by any automated check).
+
+### ~~The Action's own commit step had no retry on a push race~~ — fixed
+Caught live: a manually-triggered Action run passed all 14 pipeline steps
+clean, then failed at "Commit if the dashboard or output CSVs changed" — its
+own `git push` got rejected because a manual push (from this same session)
+landed on `main` first. `refresh.yml` had no pull-and-retry, just a bare
+`git push`, so any concurrent push — another triggered run, a manual push, a
+scheduled run overlapping a dispatch — could fail the whole job at the last
+step after 15+ minutes of real work. Fixed with a 3-attempt
+pull-`-X ours`-and-retry loop; safe here because this step only ever stages
+`docs/index.html` and `output/*.csv`, so any conflict it hits can only be on
+those deterministically-regenerated files.
 
 ### No monitoring or alerting on partial failure
 Nothing watches for a step printing "fetch failed, skipping" or a
