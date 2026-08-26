@@ -33,6 +33,11 @@ TRAJ_COLS = [
     "EQV_slope", "EQV_d2y", "ROA_slope", "asset_yoy", "asset_accel",
     "runway_q", "n_quarters", "cre_g36",
 ]
+# Deposit market-share columns, present only when 12_sod_market_share.py has run.
+SOD_COLS = [
+    "sod_primary_county", "sod_primary_state", "sod_market_share",
+    "sod_market_share_prior", "sod_share_delta", "sod_market_hhi",
+]
 # Credit-union financial columns (present only when 08_cu_screen.py has run).
 CU_COLS = [
     "ZIP", "ADDRESS",
@@ -54,7 +59,7 @@ def main():
     raw = pd.concat(frames, ignore_index=True, sort=False)
 
     has_trend = all(c in raw.columns for c in TRAJ_COLS)
-    embed = ["INST_TYPE"] + COLS + CU_COLS + FT_COLS + (TRAJ_COLS if has_trend else [])
+    embed = ["INST_TYPE"] + COLS + CU_COLS + FT_COLS + (TRAJ_COLS if has_trend else []) + SOD_COLS
     cols = [c for c in dict.fromkeys(embed) if c in raw.columns]
     df = raw[cols].copy()
     df["signals"] = df["signals"].fillna("")
@@ -355,6 +360,10 @@ const SIGNALS = [
   ["near_500m_audit","Crossed $500M (CU audit)","snapshot"],
   ["weak_profitability","Weak profitability","snapshot"],
   ["bsa_aml_scaling","BSA/AML scaling","snapshot"],
+  // Deposit market share / concentration (FDIC Summary of Deposits)
+  ["deposit_share_rising","Gaining deposit share ↗","snapshot"],
+  ["deposit_share_declining","Losing deposit share ↘","snapshot"],
+  ["dominant_market_position","Dominant local market","snapshot"],
   // 5-year trajectory signals (direction of travel)
   ["capital_building","Capital building ↗","trend"],
   ["credit_turning","Credit turning ↗","trend"],
@@ -397,6 +406,9 @@ const SIGSERVICE = {
   excess_capital:      "Refer — capital deployment / M&A (other KR practice)",
   capital_building:    "Refer — capital deployment / M&A (other KR practice)",
   weak_profitability:  "Refer — earnings / margin advisory (other KR practice)",
+  deposit_share_rising: "BSA/AML scaling, Internal Audit, risk assessment — gaining local deposit market share faster than the market",
+  deposit_share_declining: "Refer — strategic / M&A advisory (other KR practice); RAS angle = RPA cost automation + risk assessment before a sale or restructuring",
+  dominant_market_position: "Refer — M&A / de novo expansion advisory (other KR practice); RAS angle = readiness review before further growth",
   ft_national:         "BSA/AML program + independent testing; multistate money-transmitter licensing (40+ states)",
   ft_fullstack:        "Enterprise BSA/AML program, independent testing, SOC/audit (money transmitter + prepaid)",
   ft_multistate:       "BSA/AML program + independent testing; state MTL compliance (scaling)",
@@ -411,13 +423,13 @@ const SIGSERVICE = {
 const CHIP_GROUPS = [
   ["⚠ Pre-enforcement risk (flagship)", ["pre_enforcement"]],
   ["CRE concentration & stress testing", ["thin_cre_cushion","cre_concentration","cd_concentration","cre_growth_36m"]],
-  ["BSA/AML & Sanctions", ["bsa_aml_scaling","rapid_growth","growth_accelerating"]],
+  ["BSA/AML & Sanctions", ["bsa_aml_scaling","rapid_growth","growth_accelerating","deposit_share_rising"]],
   ["FDICIA / audit / $10B readiness", ["near_fdicia_1b","near_fdicia_5b","near_500m_audit","near_10b_threshold","runway_to_10b"]],
   ["Internal Audit & CECL (credit)", ["credit_deterioration","under_reserved","credit_turning"]],
   ["Robotic Process Automation", ["weak_efficiency","margin_eroding"]],
   ["Internal Audit — liquidity", ["funding_liquidity"]],
   ["Fintech — BSA/AML & licensing", ["ft_national","ft_fullstack","ft_multistate","ft_prepaid","ft_fx_crypto","ft_stale_registration","ft_recent_filing","ft_state_verified"]],
-  ["Refer — other KR practice", ["excess_capital","weak_profitability","capital_building"]],
+  ["Refer — other KR practice", ["excess_capital","weak_profitability","capital_building","deposit_share_declining","dominant_market_position"]],
 ];
 
 // Plain-language criteria shown on hover.
@@ -452,6 +464,9 @@ const DESC = {
   ft_stale_registration: "FinCEN registration must renew every 2 years (31 CFR 1022.380); this one's filing date is past that window.",
   ft_recent_filing: "Filed or renewed its FinCEN MSB registration in the last 12 months — filing date, not company age (registration renews every 2 years).",
   ft_state_verified: "Name matched against a real state money-transmitter licensee roster (currently: FL, NC, MS, AK, MA — the only states with a public bulk roster). No match doesn't mean unlicensed elsewhere; most states only offer NMLS Consumer Access, which isn't cross-checked.",
+  deposit_share_rising: "Gained 1+ point of deposit market share in its primary county over the last year (FDIC Summary of Deposits) — outgrowing local competitors.",
+  deposit_share_declining: "Lost 1+ point of deposit market share in its primary county over the last year (FDIC Summary of Deposits) — losing local market position.",
+  dominant_market_position: "Holds 25%+ of all FDIC-insured deposits in its primary county — a dominant local market position (FDIC Summary of Deposits).",
 };
 const GROUP_DESC = {
   "CRE concentration & stress testing": "KR RAS: CRE loan review, credit risk review, CECL/ALLL, and CRE stress testing / capital planning — driven by the interagency CRE concentration criteria and a reverse stress test on public data.",
@@ -518,6 +533,9 @@ const METRICS_BANK = [
   ["cd_ratio","Construction&dev / capital","%",0],
   ["cre_g36","NOO CRE growth, 36 mo","pct",0],
   ["cre_breach_loss_pct","CRE loss to breach well-cap","%",1],
+  ["sod_market_share","Deposit share, primary county","pct",1],
+  ["sod_share_delta","Deposit share change YoY","pct",1],
+  ["sod_market_hhi","Primary county HHI","num",0],
 ];
 const METRICS_CU = [
   ["NW_RATIO","Net worth ratio","%",2], ["ROA","ROA","%",2],
@@ -729,6 +747,9 @@ function expand(i) {
       if (m[0]==="ROA" && fired.has("weak_profitability")) cls="mv lo";
       if (["LNLSDEPR","brokered_pct","LOAN_TO_SHARE"].includes(m[0]) && fired.has("funding_liquidity")) cls="mv hi";
       if (m[0]==="asset_growth_yoy" && (fired.has("rapid_growth")||fired.has("growth_accelerating"))) cls="mv gd";
+      if (m[0]==="sod_share_delta" && fired.has("deposit_share_rising")) cls="mv gd";
+      if (m[0]==="sod_share_delta" && fired.has("deposit_share_declining")) cls="mv hi";
+      if (m[0]==="sod_market_share" && fired.has("dominant_market_position")) cls="mv gd";
       return `<div class="metric"><span class="m">${m[1]}</span><span class="${cls}">${fmt(r[m[0]],m[2],m[3])}</span></div>`;
     }).join("");
   }

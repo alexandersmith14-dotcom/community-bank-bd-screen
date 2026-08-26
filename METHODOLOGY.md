@@ -129,6 +129,30 @@ The dashboard shows each flagged bank's equity/assets, ROA, assets, and
 noncurrent trend as sparklines in its drill-down. Thresholds live at the top of
 `05_trajectory.py`.
 
+## Deposit market share (FDIC Summary of Deposits)
+
+`12_sod_market_share.py` pulls the **full national** branch-level SOD file
+(every FDIC-insured bank, not just the under-$10B universe) for the latest
+year and the year before — so a target's local market share is measured
+against *real* competition, including branches of large regional/national
+banks that never otherwise appear in this pipeline. For each target bank, its
+**primary county** is the one where it holds the most branch deposits; market
+share and HHI (Herfindahl-Hirschman Index, the standard bank-merger
+concentration measure) are computed for that county from every insured bank's
+branch deposits there.
+
+| Signal | Rule (default) | KR RAS service (weight) |
+|---|---|---|
+| **Gaining deposit share ↗** | primary-county share ≥ 3% **and** up ≥ 1 pt YoY | BSA/AML scaling, Internal Audit, risk assessment — growing faster than the local market (14) |
+| **Losing deposit share ↘** | primary-county share ≥ 3% **and** down ≥ 1 pt YoY | *Refer* — strategic / M&A advisory (other KR practice); RAS angle = RPA cost automation + risk assessment before a sale (10) |
+| **Dominant local market** | primary-county share ≥ 25% | *Refer* — M&A / de novo expansion advisory (other KR practice); RAS angle = readiness review before further growth (6) |
+
+The 3%-share floor on the trend signals keeps noise out — a bank with a token
+branch in a county can swing several points YoY on a tiny denominator, which
+isn't a real market-position story. HHI itself isn't scored (a bank in a
+concentrated market isn't automatically a symptom either way) but is shown in
+the drill-down for context. Thresholds live at the top of `12_sod_market_share.py`.
+
 ## Reaching decision-makers
 
 Two aids sit in each bank's drill-down:

@@ -29,6 +29,9 @@ SIGLAB = {
     "ft_fx_crypto": "FX / crypto", "ft_recent_filing": "Recently filed/renewed",
     "ft_stale_registration": "Registration overdue for renewal",
     "ft_state_verified": "State-licensed (verified)",
+    "deposit_share_rising": "Gaining deposit share (trend)",
+    "deposit_share_declining": "Losing deposit share (trend)",
+    "dominant_market_position": "Dominant local market",
 }
 SIGSVC = {
     "near_10b_threshold": "$10B readiness (CFPB, Internal Audit, FDICIA ICFR)",
@@ -54,6 +57,9 @@ SIGSVC = {
     "ft_recent_filing": "BSA/AML program review (timely, recently filed/renewed)",
     "ft_stale_registration": "BSA/AML program review (registration overdue for renewal)",
     "ft_state_verified": "Confirmed real company via state licensing (stronger lead)",
+    "deposit_share_rising": "BSA/AML scaling, Internal Audit, risk assessment (gaining local deposit share)",
+    "deposit_share_declining": "Refer: strategic / M&A advisory (other KR practice); RAS angle = RPA cost automation + risk assessment",
+    "dominant_market_position": "Refer: M&A / de novo expansion advisory (other KR practice)",
 }
 LD_TITLES = {
     "Bank": '"Chief Executive Officer" OR "President" OR "BSA Officer" OR "Chief Risk Officer" OR "Chief Audit Executive"',
