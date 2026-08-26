@@ -27,6 +27,7 @@ COLS = [
     "ROA_pct", "ROE", "NIMY", "EEFFR", "EEFFR_pct", "NCLNLSR", "NPERFV",
     "ELNANTR", "LNLSDEPR", "brokered_pct", "asset_growth_yoy",
     "cre_ratio", "cd_ratio", "cre_breach_loss_pct",
+    "uninsured_pct", "LNAGR",
 ]
 # Trajectory columns present only when 05_trajectory.py has run; embedded when found.
 TRAJ_COLS = [
@@ -42,6 +43,7 @@ SOD_COLS = [
 EVENT_COLS = [
     "events_acquired_count", "events_acquired_names", "events_last_merger_date",
     "failed_bank_name", "failed_bank_date", "failed_bank_deposits",
+    "charter_change_desc", "charter_change_date",
 ]
 # Credit-union financial columns (present only when 08_cu_screen.py has run).
 CU_COLS = [
@@ -350,12 +352,14 @@ const CU_SPARK = /*__CU_SPARK__*/;
 const SIGNALS = [
   ["pre_enforcement","Pre-enforcement profile ⚠","flagship"],
   ["thin_cre_cushion","Thin CRE cushion ⚠","flagship"],
+  ["high_uninsured_deposits","High uninsured deposits ⚠","flagship"],
   ["cre_concentration","CRE ≥300% of capital","snapshot"],
   ["cd_concentration","C&D ≥100% of capital","snapshot"],
   ["cre_growth_36m","CRE +50% in 36mo ↗","trend"],
   ["excess_capital","Excess capital","snapshot"],
   ["credit_deterioration","Credit deterioration","snapshot"],
   ["under_reserved","Under-reserved","snapshot"],
+  ["ag_concentration","Agricultural concentration","snapshot"],
   ["weak_efficiency","Weak efficiency","snapshot"],
   ["funding_liquidity","Funding / liquidity","snapshot"],
   ["rapid_growth","Rapid growth","snapshot"],
@@ -372,6 +376,7 @@ const SIGNALS = [
   // Recent M&A activity (FDIC history / failures)
   ["recent_acquirer","Recent acquirer","snapshot"],
   ["failed_bank_acquirer","Acquired a failed bank ⚠","snapshot"],
+  ["charter_conversion","Charter/regulator change","snapshot"],
   // 5-year trajectory signals (direction of travel)
   ["capital_building","Capital building ↗","trend"],
   ["credit_turning","Credit turning ↗","trend"],
@@ -394,6 +399,7 @@ const SIGLAB = Object.fromEntries(SIGNALS.map(s => [s[0], s[1]]));
 const SIGSERVICE = {
   pre_enforcement:     "Pre-enforcement readiness — risk assessment, Internal Audit, BSA/AML & remediation readiness before regulators act",
   thin_cre_cushion:    "CRE stress testing + capital planning — a modest CRE loss would breach well-capitalized (reverse stress test)",
+  high_uninsured_deposits: "Liquidity/funding risk assessment + Internal Audit — deposit base concentrated in uninsured accounts (the SVB/Signature/First Republic profile)",
   cre_concentration:   "CRE loan review, credit risk review, CECL/ALLL, CRE stress testing (supervisory concentration criteria)",
   cd_concentration:    "Construction & development loan review + credit risk management (supervisory concentration criteria)",
   cre_growth_36m:      "CRE loan review + stress testing — rapid CRE growth (second leg of the supervisory concentration criteria)",
@@ -409,6 +415,7 @@ const SIGSERVICE = {
   credit_turning:      "Early Internal Audit loan review + CECL model validation",
   weak_efficiency:     "Robotic Process Automation (RPA) + Internal Audit process review",
   under_reserved:      "CECL model validation / reserve adequacy review",
+  ag_concentration:    "Agricultural loan review + credit risk review — concentration exposed to commodity-price / farm-income cycles",
   funding_liquidity:   "Internal Audit of liquidity/funding risk controls (partial)",
   margin_eroding:      "RPA cost automation (partial)",
   excess_capital:      "Refer — capital deployment / M&A (other KR practice)",
@@ -419,6 +426,7 @@ const SIGSERVICE = {
   dominant_market_position: "Refer — M&A / de novo expansion advisory (other KR practice); RAS angle = readiness review before further growth",
   recent_acquirer:     "BSA/AML scaling, Internal Audit, risk assessment — integrating an acquired bank's customers, loans, and staff",
   failed_bank_acquirer: "BSA/AML scaling, Internal Audit, risk assessment — absorbed a failed bank's book via an FDIC-assisted deal, usually on a compressed timeline",
+  charter_conversion:  "Internal Audit / risk assessment — recently changed chartering agency or primary regulator, a new exam cycle and expectations to get ahead of",
   ft_national:         "BSA/AML program + independent testing; multistate money-transmitter licensing (40+ states)",
   ft_fullstack:        "Enterprise BSA/AML program, independent testing, SOC/audit (money transmitter + prepaid)",
   ft_multistate:       "BSA/AML program + independent testing; state MTL compliance (scaling)",
@@ -434,10 +442,10 @@ const CHIP_GROUPS = [
   ["⚠ Pre-enforcement risk (flagship)", ["pre_enforcement"]],
   ["CRE concentration & stress testing", ["thin_cre_cushion","cre_concentration","cd_concentration","cre_growth_36m"]],
   ["BSA/AML & Sanctions", ["bsa_aml_scaling","rapid_growth","growth_accelerating","deposit_share_rising","recent_acquirer","failed_bank_acquirer"]],
-  ["FDICIA / audit / $10B readiness", ["near_fdicia_1b","near_fdicia_5b","near_500m_audit","near_10b_threshold","runway_to_10b"]],
-  ["Internal Audit & CECL (credit)", ["credit_deterioration","under_reserved","credit_turning"]],
+  ["FDICIA / audit / $10B readiness", ["near_fdicia_1b","near_fdicia_5b","near_500m_audit","near_10b_threshold","runway_to_10b","charter_conversion"]],
+  ["Internal Audit & CECL (credit)", ["credit_deterioration","under_reserved","credit_turning","ag_concentration"]],
   ["Robotic Process Automation", ["weak_efficiency","margin_eroding"]],
-  ["Internal Audit — liquidity", ["funding_liquidity"]],
+  ["Internal Audit — liquidity", ["funding_liquidity","high_uninsured_deposits"]],
   ["Fintech — BSA/AML & licensing", ["ft_national","ft_fullstack","ft_multistate","ft_prepaid","ft_fx_crypto","ft_stale_registration","ft_recent_filing","ft_state_verified"]],
   ["Refer — other KR practice", ["excess_capital","weak_profitability","capital_building","deposit_share_declining","dominant_market_position"]],
 ];
@@ -449,6 +457,8 @@ const DESC = {
   cd_concentration: "Construction & development loans are 100%+ of total risk-based capital — the supervisory concentration criteria.",
   cre_growth_36m: "Non-owner-occupied CRE grew 50%+ over the last 36 months — the growth leg of the CRE concentration guidance.",
   pre_enforcement: "Financials match banks in the year before an OCC/Fed enforcement order — weak earnings + high cost + weak asset quality + brokered funding (3+ of 4). See study/FINDINGS.md.",
+  high_uninsured_deposits: "50%+ of deposits are uninsured, or worst 15% of size peers — the SVB/Signature/First Republic profile (healthy community banks typically run 20-40%).",
+  ag_concentration: "Agricultural loans 10%+ of the book AND worst 15% of size peers — no interagency threshold like CRE, so this is peer-relative with an absolute floor.",
   excess_capital: "Equity/assets in the top 20% of its size peer group — well-capitalized, with a deployment question.",
   credit_deterioration: "Net charge-offs or noncurrent assets in the worst 15% of size peers.",
   under_reserved: "Credit deterioration AND loan-loss allowance under 40% of noncurrent loans.",
@@ -479,6 +489,7 @@ const DESC = {
   dominant_market_position: "Holds 25%+ of all FDIC-insured deposits in its primary county — a dominant local market position (FDIC Summary of Deposits).",
   recent_acquirer: "Completed 1+ merger/acquisition in the last 36 months (FDIC structure-change history) — absorbed another bank's customers, loans, and staff.",
   failed_bank_acquirer: "Won an FDIC-assisted failed-bank deal in the last 5 years (FDIC failures) — took on a failed bank's book, often on a compressed integration timeline.",
+  charter_conversion: "Changed chartering agency or primary federal regulator in the last 36 months (FDIC structure-change history) — a new exam cycle either way.",
 };
 const GROUP_DESC = {
   "CRE concentration & stress testing": "KR RAS: CRE loan review, credit risk review, CECL/ALLL, and CRE stress testing / capital planning — driven by the interagency CRE concentration criteria and a reverse stress test on public data.",
@@ -548,6 +559,8 @@ const METRICS_BANK = [
   ["sod_market_share","Deposit share, primary county","pct",1],
   ["sod_share_delta","Deposit share change YoY","pct",1],
   ["sod_market_hhi","Primary county HHI","num",0],
+  ["uninsured_pct","Uninsured deposits","pct",1],
+  ["LNAGR","Agricultural loans / total loans","%",1],
 ];
 const METRICS_CU = [
   ["NW_RATIO","Net worth ratio","%",2], ["ROA","ROA","%",2],
@@ -762,6 +775,8 @@ function expand(i) {
       if (m[0]==="sod_share_delta" && fired.has("deposit_share_rising")) cls="mv gd";
       if (m[0]==="sod_share_delta" && fired.has("deposit_share_declining")) cls="mv hi";
       if (m[0]==="sod_market_share" && fired.has("dominant_market_position")) cls="mv gd";
+      if (m[0]==="uninsured_pct" && fired.has("high_uninsured_deposits")) cls="mv hi";
+      if (m[0]==="LNAGR" && fired.has("ag_concentration")) cls="mv hi";
       return `<div class="metric"><span class="m">${m[1]}</span><span class="${cls}">${fmt(r[m[0]],m[2],m[3])}</span></div>`;
     }).join("");
   }
@@ -808,7 +823,7 @@ function expand(i) {
 
   // Recent M&A activity (FDIC history / failures)
   let eventsBlock = "";
-  if (isBank && (fired.has("recent_acquirer") || fired.has("failed_bank_acquirer"))) {
+  if (isBank && (fired.has("recent_acquirer") || fired.has("failed_bank_acquirer") || fired.has("charter_conversion"))) {
     const rows = [];
     if (fired.has("failed_bank_acquirer")) {
       rows.push(`<div class="offrow"><span class="offname">⚠ ${r.failed_bank_name}</span>`+
@@ -818,7 +833,11 @@ function expand(i) {
       rows.push(`<div class="offrow"><span class="offname">${fmt(r.events_acquired_count,"num",0)} merger(s), last ${r.events_last_merger_date}</span>`+
         `<span class="offtitle">${r.events_acquired_names||""}</span></div>`);
     }
-    eventsBlock = `<div class="trendhdr">Recent M&A activity (FDIC)</div><div class="offlist">${rows.join("")}</div>`;
+    if (fired.has("charter_conversion")) {
+      rows.push(`<div class="offrow"><span class="offname">${r.charter_change_desc}</span>`+
+        `<span class="offtitle">Effective ${r.charter_change_date}</span></div>`);
+    }
+    eventsBlock = `<div class="trendhdr">Recent M&A / structure activity (FDIC)</div><div class="offlist">${rows.join("")}</div>`;
   }
 
   const tr = document.createElement("tr");

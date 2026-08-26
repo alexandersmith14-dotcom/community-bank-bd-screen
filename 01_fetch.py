@@ -81,6 +81,8 @@ FIN_FIELDS = [
     "LNLSNTV",    # net loans & leases to assets (%)
     "LNLSDEPR",   # net loans & leases to deposits (%)
     "BRO",        # brokered deposits ($000s)
+    "DEPINS", "DEPUNINS",   # insured / uninsured deposits ($000s) -- SVB-era flight-risk signal
+    "LNAG", "LNAGR",        # agricultural loans ($000s) and ratio (%)
     # CRE concentration (interagency guidance) + capital for the ratios / stress test
     "LNRECONS",   # construction & land development ($000s)
     "LNREMULT",   # multifamily ($000s)

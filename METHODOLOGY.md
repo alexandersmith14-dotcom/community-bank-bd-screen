@@ -74,6 +74,7 @@ Suite. Weights favor genuinely RAS-sellable signals; signals that belong to a
 | Signal | Rule (default) | FDIC fields | KR RAS service (weight) |
 |---|---|---|---|
 | **⚠ Thin CRE cushion** *(reverse stress)* | capital above well-capitalized (total RBC ≥10% of RWA) would be wiped out by a CRE loss ≤10% | `RBCT1J`,`RBCT2`,`RWAJT`,CRE | CRE stress testing + capital planning (22) |
+| **⚠ High uninsured deposits** | 50%+ of deposits uninsured, *or* worst 15% of band | `DEPINS`,`DEPUNINS` | Liquidity/funding risk assessment + Internal Audit — the SVB/Signature/First Republic profile (22) |
 | **CRE ≥300% of capital** | (construction + multifamily + **non-owner-occupied** nonfarm nonres) ÷ total risk-based capital ≥300% | `LNRECONS`,`LNREMULT`,`LNRENROT` | CRE loan review, credit risk review, CECL/ALLL, stress testing (20) |
 | **C&D ≥100% of capital** | construction & development ÷ total risk-based capital ≥100% | `LNRECONS` | C&D loan review + credit risk management (20) |
 | **CRE +50% in 36mo** *(trend)* | NOO CRE grew ≥50% over 12 quarters — the growth leg of the guidance | history | CRE loan review + stress testing (18) |
@@ -86,9 +87,15 @@ Suite. Weights favor genuinely RAS-sellable signals; signals that belong to a
 | **Credit deterioration** | net charge-offs *or* noncurrent in worst 15% of band | `NCLNLSR`, `NPERFV` | Internal Audit loan review + **CECL model validation** + ALLL/CECL governance (18) |
 | **Weak efficiency** | efficiency ratio ≥ 70% **and** top 20% of band | `EEFFR` | Robotic Process Automation (RPA) + Internal Audit process review (15) |
 | **Under-reserved** *(intensifier)* | deterioration **and** allowance < 40% of noncurrent | `ELNANTR` | CECL model validation / reserve adequacy review (10) |
+| **Agricultural concentration** | ag loans ≥10% of loans **and** top 15% of band | `LNAGR` | Agricultural loan review + credit risk review — commodity-price / farm-income cycle exposure (12) |
 | **Funding / liquidity** | loan/deposit ≥ 100% *or* worst 15% *or* brokered ≥ 10% of deposits | `LNLSDEPR`, `BRO`, `DEP` | *(partial)* Internal Audit of liquidity/funding controls; ALM advisory is another practice (10) |
 | **Excess capital** | equity/assets in top 20% of peer band | `EQV` | *Refer* — capital deployment / M&A (other KR practice); RAS angle = M&A compliance due diligence (5) |
 | **Weak profitability** | ROA in bottom 15% of band *or* negative | `ROA` | *Refer* — earnings / margin advisory (other KR practice); RAS angle = RPA cost automation (5) |
+
+**Agricultural concentration has no interagency threshold like CRE does** (no
+equivalent to the 100%/300%-of-capital guidance), so it's peer-relative only,
+gated by an absolute floor so a bank at the 85th percentile of a near-zero-ag
+peer band doesn't trip it.
 
 One standing service that isn't cleanly signal-derived: **Cybersecurity / Digital
 Forensics & Incident Response** applies to essentially every institution — a
@@ -153,7 +160,7 @@ isn't a real market-position story. HHI itself isn't scored (a bank in a
 concentrated market isn't automatically a symptom either way) but is shown in
 the drill-down for context. Thresholds live at the top of `12_sod_market_share.py`.
 
-## Recent M&A activity (FDIC history / failures)
+## Recent M&A / structure activity (FDIC history / failures)
 
 `13_bank_events.py` flags banks that recently took on another institution's
 customers, loans, and staff — the BSA/AML program and Internal Audit function
@@ -165,6 +172,7 @@ to call (this isn't a modeled judgment like the peer-percentile signals — it's
 |---|---|---|---|
 | **Recent acquirer** | completed 1+ merger/acquisition in the last 36 months | FDIC `history` (`CHANGECODE:810`, `ACQ_CERT` ties directly to our CERT) | BSA/AML scaling, Internal Audit, risk assessment (14) |
 | **⚠ Acquired a failed bank** | won an FDIC-assisted failed-bank deal in the last 5 years | FDIC `failures` | BSA/AML scaling, Internal Audit, risk assessment — usually a compressed integration timeline (20) |
+| **Charter/regulator change** | changed chartering agency *or* primary federal regulator in the last 36 months | FDIC `history` (`CHANGECODE:420`/`470`) | Internal Audit / risk assessment — new regulator, new exam cycle either way (10) |
 
 **A data gap, handled the same way as the fintech list.** The `failures`
 endpoint only gives the winning bidder's name (`BIDNAME`), not a CERT, so

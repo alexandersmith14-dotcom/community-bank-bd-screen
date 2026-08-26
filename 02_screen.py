@@ -114,6 +114,16 @@ WELL_CAP_TRBC = 0.10
 THIN_CUSHION = 10.0        # breach at a <=10% CRE loss = thin cushion
 UNDERRESERVED = 40.0      # allowance < 40% of noncurrent loans
 
+# Uninsured-deposit flight risk (the headline SVB/Signature/First Republic
+# metric): SVB was ~94% uninsured, Signature ~90%, First Republic ~68%;
+# healthy community banks typically run 20-40%. 50% is a widely-cited danger
+# line in the post-2023 literature.
+UNINSURED_ABS = 0.50
+# Agricultural concentration has no interagency guidance threshold like CRE
+# does, so this is peer-relative only, gated by an absolute floor so a bank
+# at the 85th percentile of a near-zero-ag peer band doesn't trip it.
+AG_ABS_FLOOR = 10.0        # ag loans >= 10% of... (ratio field is already %, of total loans)
+
 # Asset bands (in $thousands) for peer grouping.
 # Top band is open-ended ("$3B+") so the community banks over $10B still land in
 # a peer group and get percentile-ranked rather than dropped.
@@ -132,6 +142,7 @@ SERVICE = {
     "near_10b_threshold":   (22, "KR RAS: $10B readiness — Consumer Compliance (CFPB), Durbin, expanded BSA/AML, Internal Audit, DFAST"),
     "bsa_aml_scaling":      (20, "KR RAS: BSA/AML program enhancement + independent testing (AML & Sanctions / OFAC)"),
     "thin_cre_cushion":     (22, "KR RAS: CRE stress testing + capital planning — reverse stress test shows a modest CRE loss breaches well-capitalized"),
+    "high_uninsured_deposits": (22, "KR RAS: liquidity/funding risk assessment + Internal Audit — deposit base concentrated in uninsured accounts (the SVB/Signature/First Republic profile)"),
     "cre_concentration":    (20, "KR RAS: CRE loan review, credit risk review, CECL/ALLL, CRE stress testing (>=300% of capital — supervisory concentration criteria)"),
     "cd_concentration":     (20, "KR RAS: construction & development loan review + credit risk management (>=100% of capital — supervisory concentration criteria)"),
     "near_fdicia_5b":       (20, "KR RAS: FDICIA Part 363 ICFR management assessment + auditor attestation (crossing $5B; threshold raised from $1B, effective 2026)"),
@@ -140,6 +151,7 @@ SERVICE = {
     "credit_deterioration": (18, "KR RAS: Internal Audit loan review + CECL model validation + ALLL/CECL governance"),
     "weak_efficiency":      (15, "KR RAS: Robotic Process Automation (RPA) + Internal Audit process review"),
     "under_reserved":       (10, "KR RAS: CECL model validation / reserve adequacy review"),
+    "ag_concentration":     (12, "KR RAS: agricultural loan review + credit risk review — concentration exposed to commodity-price / farm-income cycles"),
     # --- Partial fit ----------------------------------------------------
     "funding_liquidity":    (10, "KR RAS (partial): Internal Audit of liquidity/funding risk controls; ALM advisory is another practice"),
     # --- Not RAS: surface but refer to another KR practice --------------
@@ -165,7 +177,8 @@ def add_derived(df):
     num = ["ASSET", "DEP", "EQV", "RBC1AAJ", "RBCRWAJ", "RBCT1CER", "ROA", "ROE",
            "NIMY", "EEFFR", "NCLNLSR", "NPERFV", "ELNANTR", "LNATRESR",
            "LNLSNTV", "LNLSDEPR", "BRO", "ASSET_PRIOR",
-           "LNRECONS", "LNREMULT", "LNRENROT", "LNRENROW", "RBCT1J", "RBCT2", "RWAJT"]
+           "LNRECONS", "LNREMULT", "LNRENROT", "LNRENROW", "RBCT1J", "RBCT2", "RWAJT",
+           "DEPINS", "DEPUNINS", "LNAG", "LNAGR"]
     for c in num:
         df[c] = pd.to_numeric(df.get(c), errors="coerce")
 
@@ -198,12 +211,17 @@ def add_derived(df):
         (df["ASSET"] - df["ASSET_PRIOR"]) / df["ASSET_PRIOR"],
         np.nan,
     )
+    # DEPINS/DEPUNINS are domestic-office deposits only (no DEPFOR breakdown by
+    # insured status), so the denominator is DEPINS+DEPUNINS itself, not DEP.
+    ins_total = df["DEPINS"].fillna(0) + df["DEPUNINS"].fillna(0)
+    df["uninsured_pct"] = np.where(ins_total > 0, df["DEPUNINS"] / ins_total, np.nan)
     return df
 
 
 def add_percentiles(df):
     """Within-band percentile rank (0-1) for each ratio that a signal uses."""
-    cols = ["EQV", "RBC1AAJ", "EEFFR", "NCLNLSR", "NPERFV", "ROA", "LNLSDEPR"]
+    cols = ["EQV", "RBC1AAJ", "EEFFR", "NCLNLSR", "NPERFV", "ROA", "LNLSDEPR",
+            "LNAGR", "uninsured_pct"]
     for c in cols:
         df[c + "_pct"] = (
             df.groupby("asset_band", observed=True)[c]
@@ -276,6 +294,16 @@ def apply_signals(df):
     sig["pre_enforcement"] = (d_earn.astype(int) + d_cost.astype(int)
                               + d_credit.astype(int) + d_fund.astype(int)) >= 3
 
+    # 10. Uninsured-deposit flight risk: the SVB/Signature/First Republic
+    #     profile. Absolute danger line OR a peer-relative outlier.
+    sig["high_uninsured_deposits"] = (
+        (df["uninsured_pct"] >= UNINSURED_ABS) | (df["uninsured_pct_pct"] >= p_xhi)
+    )
+
+    # 11. Agricultural concentration: no interagency threshold like CRE, so
+    #     peer-relative (top of band) gated by an absolute floor.
+    sig["ag_concentration"] = (df["LNAGR"] >= AG_ABS_FLOOR) & (df["LNAGR_pct"] >= p_xhi)
+
     for k, v in sig.items():
         df[k] = v.fillna(False).astype(bool)
     return df, list(sig.keys())
@@ -313,6 +341,7 @@ def main():
         "NIMY", "EEFFR", "EEFFR_pct", "NCLNLSR", "NPERFV", "ELNANTR",
         "LNLSDEPR", "brokered_pct", "asset_growth_yoy",
         "cre_ratio", "cd_ratio", "cre_breach_loss_pct",
+        "uninsured_pct", "LNAGR",
     ]
     ranked = df[df["n_signals"] > 0].sort_values(
         ["score", "n_signals", "asset_musd"], ascending=False

@@ -34,6 +34,9 @@ SIGLAB = {
     "dominant_market_position": "Dominant local market",
     "recent_acquirer": "Recent acquirer (M&A)",
     "failed_bank_acquirer": "Acquired a failed bank",
+    "charter_conversion": "Charter/regulator change",
+    "high_uninsured_deposits": "High uninsured deposits",
+    "ag_concentration": "Agricultural concentration",
 }
 SIGSVC = {
     "near_10b_threshold": "$10B readiness (CFPB, Internal Audit, FDICIA ICFR)",
@@ -64,6 +67,9 @@ SIGSVC = {
     "dominant_market_position": "Refer: M&A / de novo expansion advisory (other KR practice)",
     "recent_acquirer": "BSA/AML scaling, Internal Audit, risk assessment (integrating an acquisition)",
     "failed_bank_acquirer": "BSA/AML scaling, Internal Audit, risk assessment (absorbed a failed bank's book)",
+    "charter_conversion": "Internal Audit / risk assessment (new regulator, new exam cycle)",
+    "high_uninsured_deposits": "Liquidity/funding risk assessment + Internal Audit (SVB/Signature profile)",
+    "ag_concentration": "Agricultural loan review + credit risk review",
 }
 LD_TITLES = {
     "Bank": '"Chief Executive Officer" OR "President" OR "BSA Officer" OR "Chief Risk Officer" OR "Chief Audit Executive"',

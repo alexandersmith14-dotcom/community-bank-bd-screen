@@ -21,10 +21,16 @@ reason to call, and unambiguous (unlike the peer-percentile signals, this is
                           names against state license rosters. Payout
                           resolutions (RESTYPE1 == "PO", no acquirer) are
                           excluded -- nobody absorbed anything in a payout.
+  charter_conversion      changed chartering agency or primary federal
+                          regulator (FDIC `history`, CHANGECODE 420/470) in
+                          the last 36 months. Direction-agnostic on purpose --
+                          a new regulator means a new exam cycle and a fresh
+                          set of expectations either way, which is reason
+                          enough to ask about readiness.
 
 Rewrites output/targets.csv in place, same pattern as 05_trajectory.py /
-12_sod_market_share.py. Idempotent: strips any events_*/failed_* columns and
-previously appended signals+score before recomputing.
+12_sod_market_share.py. Idempotent: strips any events_*/failed_*/charter_*
+columns and previously appended signals+score before recomputing.
 """
 
 import os
@@ -56,6 +62,7 @@ MATCH_THRESHOLD = 88   # rapidfuzz token_sort_ratio, same threshold as 11_state_
 EVENTSERVICE = {
     "recent_acquirer": (14, "KR RAS: BSA/AML scaling, Internal Audit, risk assessment -- integrating an acquired bank's customers, loans, and staff"),
     "failed_bank_acquirer": (20, "KR RAS: BSA/AML scaling, Internal Audit, risk assessment -- absorbed a failed bank's book via an FDIC-assisted deal, usually on a compressed timeline"),
+    "charter_conversion": (10, "KR RAS: Internal Audit / risk assessment -- recently changed chartering agency or primary regulator, a new exam cycle and expectations to get ahead of"),
 }
 
 
@@ -112,6 +119,21 @@ def fetch_mergers():
     return df.dropna(subset=["CERT"])
 
 
+def fetch_charter_changes():
+    start = months_ago(MERGER_LOOKBACK_MONTHS).strftime("%Y%m%d")
+    end = date.today().strftime("%Y%m%d")
+    df = fetch_all(
+        "history",
+        filters=f"(CHANGECODE:420 OR CHANGECODE:470) AND EFFDATE:[{start} TO {end}]",
+        fields=["CERT", "CHANGECODE_DESC", "EFFDATE"],
+    )
+    print(f"  Charter/regulator changes (last {MERGER_LOOKBACK_MONTHS}mo): {len(df):,} events")
+    if df.empty:
+        return df
+    df["CERT"] = pd.to_numeric(df["CERT"], errors="coerce")
+    return df.dropna(subset=["CERT"])
+
+
 def fetch_failures():
     cutoff = date.today().replace(year=date.today().year - FAILURE_LOOKBACK_YEARS)
     df = fetch_all(
@@ -151,7 +173,8 @@ def main():
     targets = pd.read_csv("output/targets.csv")
 
     event_cols = ["events_acquired_count", "events_acquired_names", "events_last_merger_date",
-                  "failed_bank_name", "failed_bank_date", "failed_bank_deposits"]
+                  "failed_bank_name", "failed_bank_date", "failed_bank_deposits",
+                  "charter_change_desc", "charter_change_date"]
     targets = targets.drop(columns=[c for c in event_cols if c in targets.columns])
 
     def strip_prior(r):
@@ -169,6 +192,8 @@ def main():
 
     print("Fetching FDIC structure-change history (mergers) ...")
     mergers = fetch_mergers()
+    print("Fetching FDIC structure-change history (charter/regulator changes) ...")
+    charter_changes = fetch_charter_changes()
     print("Fetching FDIC failures ...")
     failures = fetch_failures()
 
@@ -194,12 +219,23 @@ def main():
         failed_matches = failed_matches.sort_values("failed_bank_deposits", ascending=False) \
             .drop_duplicates("CERT", keep="first")
 
+    if not charter_changes.empty:
+        charter_agg = charter_changes.groupby("CERT").agg(
+            charter_change_desc=("CHANGECODE_DESC", lambda s: "; ".join(dict.fromkeys(s))),
+            charter_change_date=("EFFDATE", "max"),
+        ).reset_index()
+        charter_agg["CERT"] = charter_agg["CERT"].astype(int)
+    else:
+        charter_agg = pd.DataFrame(columns=["CERT", "charter_change_desc", "charter_change_date"])
+
     m = targets.merge(merger_agg, on="CERT", how="left")
     m = m.merge(failed_matches, on="CERT", how="left")
+    m = m.merge(charter_agg, on="CERT", how="left")
 
     sig = {
         "recent_acquirer": m["events_acquired_count"].fillna(0) >= 1,
         "failed_bank_acquirer": m["failed_bank_name"].notna(),
+        "charter_conversion": m["charter_change_desc"].notna(),
     }
     for k, v in sig.items():
         m[k] = v
