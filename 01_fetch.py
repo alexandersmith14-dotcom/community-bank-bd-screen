@@ -59,7 +59,9 @@ def resolve_dates():
 INST_FIELDS = ["CERT", "NAME", "CITY", "STALP", "BKCLASS", "ACTIVE",
                "REGAGNT",   # primary federal regulator: FDIC, OCC, or FED
                "STCHRTR",   # 1 = state-chartered (has a state regulator), 0 = federally chartered
-               "ZIP", "ADDRESS", "WEBADDR"]   # contact info for outreach
+               "ZIP", "ADDRESS", "WEBADDR",   # contact info for outreach
+               "CHARTER",   # OCC charter number (national banks) -- cross-references OCC's own enforcement-action search
+               "NAMEHCR"]   # holding company name -- Fed enforcement actions are often filed against the holding co, not the bank
 
 FIN_FIELDS = [
     "CERT", "REPDTE", "ASSET", "DEP", "NUMEMP",

@@ -183,58 +183,73 @@ that leg fuzzy-matches `BIDNAME` against `institutions.csv` the same way
 are excluded. `history`'s merger leg needs no fuzzy matching — `ACQ_CERT` is
 a direct key.
 
-## FDIC consent orders (ED&O) — ground truth, not a model
+## Formal enforcement orders — ground truth, not a model
 
 Every other signal in this tool is a modeled proxy: a financial ratio that
 *correlates* with risk. `14_consent_orders.py` is the one exception — it
-flags banks with an actual, named FDIC Cease and Desist / Consent Order on
-record in the last 5 years, pulled from FDIC's own Enforcement Decisions &
-Orders site (`orders.fdic.gov`, "ED&O"). A bank under (or recently under) an
-enforcement order almost always has a court-ordered or negotiated remediation
-mandate attached — independent BSA/AML testing, an enhanced compliance
-program, board reporting — which is about as concrete a reason to call as
-exists in this whole tool.
+flags banks with an actual, named formal enforcement order on record in the
+last 5 years. A bank under (or recently under) one almost always has a
+court-ordered or negotiated remediation mandate attached — independent
+BSA/AML testing, an enhanced compliance program, board reporting — which is
+about as concrete a reason to call as exists in this whole tool.
 
 | Signal | Rule (default) | KR RAS service (weight) |
 |---|---|---|
-| **⚠ FDIC consent order** | named in a Cease and Desist / Consent Order in the last 5 years | BSA/AML & Sanctions remediation, Internal Audit, independent testing — live compliance mandate (26) |
+| **⚠ Formal enforcement order** | named in a Cease and Desist / Consent Order / Formal Agreement / Written Agreement in the last 5 years, from FDIC, OCC, or the Fed | BSA/AML & Sanctions remediation, Internal Audit, independent testing — live compliance mandate (26) |
 
-**No public API for this data.** ED&O is a Salesforce Experience Cloud site
-with a search form and a "Download All" button (`EDOSSearchForm.convertCSV`,
-a Salesforce Aura action) — no REST/bulk endpoint exists to call directly. It
-fetches the same way `11_state_licenses.py`'s Massachusetts leg does: a real
-Playwright browser context (already a pipeline dependency). Wrapped in
-try/except like every state-licenses fetch — if the site changes or is
-unreachable, this step is skipped rather than failing the run.
+**Covering only FDIC would structurally miss 36% of the universe.** Our
+institutions split roughly FDIC 64% / OCC 20% / Fed 16% by primary regulator
+(`REGAGNT`), and FDIC's own enforcement site only lists FDIC-supervised
+banks. So this pulls from all three:
 
-**`Cert Number` ties directly to CERT** — a real improvement over
-`13_bank_events.py`'s `failures` leg, which only gets a bank name and has to
-fuzzy-match it. Multi-respondent orders join per-party values with `;` in one
-cell (e.g. an order naming the bank plus two officers); the first non-`N/A`
-token is the bank's CERT.
+- **FDIC** (`orders.fdic.gov`, "ED&O") — no public API; a Salesforce
+  Experience Cloud site whose "Download All" button triggers a Salesforce
+  Aura action (`EDOSSearchForm.convertCSV`) generating a full CSV. Fetched
+  via Playwright, same approach as `11_state_licenses.py`'s Massachusetts
+  leg. `Cert Number` ties directly to CERT (multi-respondent orders join
+  per-party values with `;` in one cell; the first non-`N/A` token is the
+  bank's). No status field — termination orders are titled predictably
+  ("Order Terminating Consent Order"), so status is inferred from title text.
+- **OCC** (`apps.occ.gov/EASearch`) — also no public API, and also blocks
+  plain HTTP clients outright (confirmed: `requests` and `curl` both get an
+  SSL handshake rejection — a real WAF wall, not a fluke), so this is
+  Playwright too. Unlike FDIC, OCC's results page is server-rendered HTML
+  with Start Date *and* Termination Date on the same row — no title-text
+  inference needed. `Charter Number` (OCC's own numbering, distinct from
+  CERT) is exposed as the `CHARTER` field on FDIC's own `institutions`
+  endpoint — a direct cross-reference, no fuzzy matching. Scope: Action Type
+  `C&D` (Cease & Desist) and `FA` (Formal Agreement, OCC's consent-order
+  equivalent for national banks).
+- **Federal Reserve** — via the same OpenSanctions `us_fed_enforcements`
+  mirror `study/enforcement_study.py` already used to build the *modeled*
+  `pre_enforcement` signal above, just never turned into a direct
+  ground-truth flag until now. A plain CSV, no browser needed. No RSSD or
+  charter cross-reference exists in this dataset, so it's fuzzy-matched —
+  same `core_name()` + `rapidfuzz` pattern as `13_bank_events.py`'s
+  `failures` leg. Two wrinkles: the "Banking Organization" field is often
+  the **holding company**, not the bank (Fed regulates BHCs directly, so
+  candidates are matched against both the bank's name and its holding
+  company name — the newly-added `NAMEHCR` field), and one row can name
+  multiple entities joined by "and" or ";" (each is tried as a separate
+  match candidate). Scope: Action containing "Written Agreement" (the Fed's
+  consent-order equivalent), "Cease and Desist," or "Consent Order."
 
-**Active vs. terminated, inferred from title text, not a status field.**
-ED&O has no clean status column, but termination orders are titled
-predictably ("Order Terminating Consent Order," "Order Terminating Decision
-and Order to Cease and Desist"). Per bank, if the most recent C&D-family
-event in the 5-year window is one of those, the order is shown as
-terminated; otherwise it's presumed active. This only looks within the
-window — an order issued before it and terminated inside it won't show a
-status, an accepted scope boundary.
+All three normalize to the same shape and combine into one signal. A bank
+matched in more than one source shows up correctly and isn't a bug — a
+Fed-regulated holding company can get its own Written Agreement independent
+of an FDIC or OCC order against the underlying bank, since the Fed
+regulates holding companies regardless of the bank's own primary regulator.
+Each source fetches independently in its own try/except, so one flaky
+regulator's site never takes out the other two or the whole run.
 
 **Unlike every other event-based signal, this one can add a bank to the
-target list on its own.** A consent order is concrete enough that a bank
+target list on its own.** A confirmed order is concrete enough that a bank
 shouldn't be left off just because no financial-ratio signal happened to
 fire — banks matched here but not otherwise flagged are pulled in from the
 full scored universe (`all_banks.csv`), the same way `05_trajectory.py` adds
 banks whose trend alone qualifies them. If a bank's only reason for being on
-the list is a consent order that later ages past the 5-year window, it drops
-back off on the next refresh.
-
-This is a separate, complementary source from `study/enforcement_study.py`,
-which studies **OCC and Federal Reserve** enforcement orders (via
-OpenSanctions) to build the *modeled* `pre_enforcement` signal above — FDIC's
-own enforcement actions were never in that dataset.
+the list is an order that later ages past the 5-year window, it drops back
+off on the next refresh.
 
 ## Reaching decision-makers
 
