@@ -183,6 +183,59 @@ that leg fuzzy-matches `BIDNAME` against `institutions.csv` the same way
 are excluded. `history`'s merger leg needs no fuzzy matching — `ACQ_CERT` is
 a direct key.
 
+## FDIC consent orders (ED&O) — ground truth, not a model
+
+Every other signal in this tool is a modeled proxy: a financial ratio that
+*correlates* with risk. `14_consent_orders.py` is the one exception — it
+flags banks with an actual, named FDIC Cease and Desist / Consent Order on
+record in the last 5 years, pulled from FDIC's own Enforcement Decisions &
+Orders site (`orders.fdic.gov`, "ED&O"). A bank under (or recently under) an
+enforcement order almost always has a court-ordered or negotiated remediation
+mandate attached — independent BSA/AML testing, an enhanced compliance
+program, board reporting — which is about as concrete a reason to call as
+exists in this whole tool.
+
+| Signal | Rule (default) | KR RAS service (weight) |
+|---|---|---|
+| **⚠ FDIC consent order** | named in a Cease and Desist / Consent Order in the last 5 years | BSA/AML & Sanctions remediation, Internal Audit, independent testing — live compliance mandate (26) |
+
+**No public API for this data.** ED&O is a Salesforce Experience Cloud site
+with a search form and a "Download All" button (`EDOSSearchForm.convertCSV`,
+a Salesforce Aura action) — no REST/bulk endpoint exists to call directly. It
+fetches the same way `11_state_licenses.py`'s Massachusetts leg does: a real
+Playwright browser context (already a pipeline dependency). Wrapped in
+try/except like every state-licenses fetch — if the site changes or is
+unreachable, this step is skipped rather than failing the run.
+
+**`Cert Number` ties directly to CERT** — a real improvement over
+`13_bank_events.py`'s `failures` leg, which only gets a bank name and has to
+fuzzy-match it. Multi-respondent orders join per-party values with `;` in one
+cell (e.g. an order naming the bank plus two officers); the first non-`N/A`
+token is the bank's CERT.
+
+**Active vs. terminated, inferred from title text, not a status field.**
+ED&O has no clean status column, but termination orders are titled
+predictably ("Order Terminating Consent Order," "Order Terminating Decision
+and Order to Cease and Desist"). Per bank, if the most recent C&D-family
+event in the 5-year window is one of those, the order is shown as
+terminated; otherwise it's presumed active. This only looks within the
+window — an order issued before it and terminated inside it won't show a
+status, an accepted scope boundary.
+
+**Unlike every other event-based signal, this one can add a bank to the
+target list on its own.** A consent order is concrete enough that a bank
+shouldn't be left off just because no financial-ratio signal happened to
+fire — banks matched here but not otherwise flagged are pulled in from the
+full scored universe (`all_banks.csv`), the same way `05_trajectory.py` adds
+banks whose trend alone qualifies them. If a bank's only reason for being on
+the list is a consent order that later ages past the 5-year window, it drops
+back off on the next refresh.
+
+This is a separate, complementary source from `study/enforcement_study.py`,
+which studies **OCC and Federal Reserve** enforcement orders (via
+OpenSanctions) to build the *modeled* `pre_enforcement` signal above — FDIC's
+own enforcement actions were never in that dataset.
+
 ## Reaching decision-makers
 
 Two aids sit in each bank's drill-down:

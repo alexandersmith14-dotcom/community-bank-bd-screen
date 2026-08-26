@@ -37,6 +37,7 @@ SIGLAB = {
     "charter_conversion": "Charter/regulator change",
     "high_uninsured_deposits": "High uninsured deposits",
     "ag_concentration": "Agricultural concentration",
+    "consent_order": "FDIC consent order",
 }
 SIGSVC = {
     "near_10b_threshold": "$10B readiness (CFPB, Internal Audit, FDICIA ICFR)",
@@ -70,6 +71,7 @@ SIGSVC = {
     "charter_conversion": "Internal Audit / risk assessment (new regulator, new exam cycle)",
     "high_uninsured_deposits": "Liquidity/funding risk assessment + Internal Audit (SVB/Signature profile)",
     "ag_concentration": "Agricultural loan review + credit risk review",
+    "consent_order": "BSA/AML & Sanctions remediation, Internal Audit, independent testing (confirmed FDIC enforcement order)",
 }
 LD_TITLES = {
     "Bank": '"Chief Executive Officer" OR "President" OR "BSA Officer" OR "Chief Risk Officer" OR "Chief Audit Executive"',

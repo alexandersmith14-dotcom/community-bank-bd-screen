@@ -45,6 +45,9 @@ EVENT_COLS = [
     "failed_bank_name", "failed_bank_date", "failed_bank_deposits",
     "charter_change_desc", "charter_change_date",
 ]
+# Consent order columns, present only when 14_consent_orders.py has run.
+CONSENT_COLS = ["consent_order_count", "consent_order_date",
+                "consent_order_title", "consent_order_status"]
 # Credit-union financial columns (present only when 08_cu_screen.py has run).
 CU_COLS = [
     "ZIP", "ADDRESS",
@@ -66,7 +69,7 @@ def main():
     raw = pd.concat(frames, ignore_index=True, sort=False)
 
     has_trend = all(c in raw.columns for c in TRAJ_COLS)
-    embed = ["INST_TYPE"] + COLS + CU_COLS + FT_COLS + (TRAJ_COLS if has_trend else []) + SOD_COLS + EVENT_COLS
+    embed = ["INST_TYPE"] + COLS + CU_COLS + FT_COLS + (TRAJ_COLS if has_trend else []) + SOD_COLS + EVENT_COLS + CONSENT_COLS
     cols = [c for c in dict.fromkeys(embed) if c in raw.columns]
     df = raw[cols].copy()
     df["signals"] = df["signals"].fillna("")
@@ -353,6 +356,7 @@ const SIGNALS = [
   ["pre_enforcement","Pre-enforcement profile ⚠","flagship"],
   ["thin_cre_cushion","Thin CRE cushion ⚠","flagship"],
   ["high_uninsured_deposits","High uninsured deposits ⚠","flagship"],
+  ["consent_order","⚠ FDIC consent order","flagship"],
   ["cre_concentration","CRE ≥300% of capital","snapshot"],
   ["cd_concentration","C&D ≥100% of capital","snapshot"],
   ["cre_growth_36m","CRE +50% in 36mo ↗","trend"],
@@ -400,6 +404,7 @@ const SIGSERVICE = {
   pre_enforcement:     "Pre-enforcement readiness — risk assessment, Internal Audit, BSA/AML & remediation readiness before regulators act",
   thin_cre_cushion:    "CRE stress testing + capital planning — a modest CRE loss would breach well-capitalized (reverse stress test)",
   high_uninsured_deposits: "Liquidity/funding risk assessment + Internal Audit — deposit base concentrated in uninsured accounts (the SVB/Signature/First Republic profile)",
+  consent_order: "BSA/AML & Sanctions remediation, Internal Audit, independent testing — under (or recently under) a formal FDIC enforcement order with a live compliance mandate",
   cre_concentration:   "CRE loan review, credit risk review, CECL/ALLL, CRE stress testing (supervisory concentration criteria)",
   cd_concentration:    "Construction & development loan review + credit risk management (supervisory concentration criteria)",
   cre_growth_36m:      "CRE loan review + stress testing — rapid CRE growth (second leg of the supervisory concentration criteria)",
@@ -439,7 +444,7 @@ const SIGSERVICE = {
 
 // Signal pills grouped under the KR RAS service line they feed.
 const CHIP_GROUPS = [
-  ["⚠ Pre-enforcement risk (flagship)", ["pre_enforcement"]],
+  ["⚠ Pre-enforcement risk (flagship)", ["pre_enforcement","consent_order"]],
   ["CRE concentration & stress testing", ["thin_cre_cushion","cre_concentration","cd_concentration","cre_growth_36m"]],
   ["BSA/AML & Sanctions", ["bsa_aml_scaling","rapid_growth","growth_accelerating","deposit_share_rising","recent_acquirer","failed_bank_acquirer"]],
   ["FDICIA / audit / $10B readiness", ["near_fdicia_1b","near_fdicia_5b","near_500m_audit","near_10b_threshold","runway_to_10b","charter_conversion"]],
@@ -458,6 +463,7 @@ const DESC = {
   cre_growth_36m: "Non-owner-occupied CRE grew 50%+ over the last 36 months — the growth leg of the CRE concentration guidance.",
   pre_enforcement: "Financials match banks in the year before an OCC/Fed enforcement order — weak earnings + high cost + weak asset quality + brokered funding (3+ of 4). See study/FINDINGS.md.",
   high_uninsured_deposits: "50%+ of deposits are uninsured, or worst 15% of size peers — the SVB/Signature/First Republic profile (healthy community banks typically run 20-40%).",
+  consent_order: "Named in an FDIC Cease and Desist / Consent Order in the last 5 years (FDIC ED&O) — ground truth, not a modeled signal. Status (active/terminated) inferred from the most recent order's title.",
   ag_concentration: "Agricultural loans 10%+ of the book AND worst 15% of size peers — no interagency threshold like CRE, so this is peer-relative with an absolute floor.",
   excess_capital: "Equity/assets in the top 20% of its size peer group — well-capitalized, with a deployment question.",
   credit_deterioration: "Net charge-offs or noncurrent assets in the worst 15% of size peers.",
@@ -493,7 +499,7 @@ const DESC = {
 };
 const GROUP_DESC = {
   "CRE concentration & stress testing": "KR RAS: CRE loan review, credit risk review, CECL/ALLL, and CRE stress testing / capital planning — driven by the interagency CRE concentration criteria and a reverse stress test on public data.",
-  "⚠ Pre-enforcement risk (flagship)": "KR RAS: banks whose financials match the empirical pattern ~1 year before an OCC/Fed enforcement order — a warm, specific reason to get ahead of it (risk assessment, Internal Audit, BSA/AML, remediation readiness).",
+  "⚠ Pre-enforcement risk (flagship)": "KR RAS: banks whose financials match the empirical pattern ~1 year before an OCC/Fed enforcement order (modeled), or banks with a real FDIC consent order on record (confirmed) — a warm, specific reason to get ahead of it or help execute the remediation (risk assessment, Internal Audit, BSA/AML).",
   "BSA/AML & Sanctions": "KR RAS: BSA/AML program build & independent testing, OFAC/sanctions.",
   "FDICIA / audit / $10B readiness": "KR RAS: FDICIA ICFR (banks) & NCUA $500M CPA audit (credit unions); $10B-tier readiness (CFPB, stress testing).",
   "Internal Audit & CECL (credit)": "KR RAS: Internal Audit loan review, CECL model validation, ALLL governance.",
@@ -840,6 +846,14 @@ function expand(i) {
     eventsBlock = `<div class="trendhdr">Recent M&A / structure activity (FDIC)</div><div class="offlist">${rows.join("")}</div>`;
   }
 
+  // FDIC formal enforcement action (ED&O) — ground truth, shown separately
+  let consentBlock = "";
+  if (isBank && fired.has("consent_order")) {
+    consentBlock = `<div class="trendhdr">⚠ FDIC enforcement action (ED&O)</div><div class="offlist">`+
+      `<div class="offrow"><span class="offname">${r.consent_order_title} · ${r.consent_order_date}</span>`+
+      `<span class="offtitle">${r.consent_order_status}${r.consent_order_count>1?` · ${fmt(r.consent_order_count,"num",0)} orders in the last 5yr`:""}</span></div></div>`;
+  }
+
   const tr = document.createElement("tr");
   tr.className="detail"; tr.dataset.for=i;
   const ld = linkedinSearch(r);
@@ -876,7 +890,7 @@ function expand(i) {
     `<div style="color:var(--text-secondary);margin-bottom:8px">${idLabel}${regLabel}</div>`+
     contactLabel+
     `<div class="trendhdr">KR RAS services to pitch</div><div class="svcmap">${svcRows}</div>`+
-    ldBlock+egBlock+eventsBlock+
+    ldBlock+egBlock+consentBlock+eventsBlock+
     `<div class="trendhdr">${detailHdr}</div><div class="detail-grid">${cells}</div>${trendHtml}</div></td>`;
   const rowEl = document.querySelector(`tr[data-i="${i}"]`);
   rowEl.after(tr);
