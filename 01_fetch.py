@@ -17,6 +17,18 @@ import pandas as pd
 
 API = "https://api.fdic.gov/banks"
 
+# FDIC requires an api.data.gov key starting 2026-09-08 (see BankFind Suite API
+# docs banner). Set via the FDIC_API_KEY repo secret / env var; requests still
+# work without it until that date, so this stays optional rather than required.
+API_KEY = os.environ.get("FDIC_API_KEY")
+
+
+def get(url, params, **kw):
+    if API_KEY:
+        params = {**params, "api_key": API_KEY}
+    return requests.get(url, params=params, **kw)
+
+
 # ---- What counts as a "community bank" for the pull -------------------------
 # FDIC reports ASSET in THOUSANDS of dollars, so $10B = 10,000,000.
 ASSET_CAP_THOUSANDS = 10_000_000
@@ -31,7 +43,7 @@ PRIOR_REPDTE   = "auto"   # same quarter one year earlier (for YoY growth)
 def resolve_dates():
     global CURRENT_REPDTE, PRIOR_REPDTE
     if CURRENT_REPDTE == "auto":
-        r = requests.get(
+        r = get(
             f"{API}/financials",
             params={"fields": "REPDTE", "sort_by": "REPDTE",
                     "sort_order": "DESC", "limit": 1, "format": "json"},
@@ -91,7 +103,7 @@ def fetch_all(endpoint, filters, fields):
             "offset": offset,
             "format": "json",
         }
-        r = requests.get(f"{API}/{endpoint}", params=params, timeout=60)
+        r = get(f"{API}/{endpoint}", params=params, timeout=60)
         r.raise_for_status()
         batch = r.json().get("data", [])
         if not batch:

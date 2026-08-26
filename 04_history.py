@@ -10,6 +10,7 @@ Banks that didn't exist (or filed above the cap) in an earlier quarter simply
 have fewer rows; the trajectory step handles short histories gracefully.
 """
 
+import os
 import time
 import requests
 import pandas as pd
@@ -17,6 +18,16 @@ import pandas as pd
 API = "https://api.fdic.gov/banks"
 ASSET_CAP_THOUSANDS = 10_000_000
 N_QUARTERS = 20   # ~5 years
+
+# FDIC requires an api.data.gov key starting 2026-09-08 (see BankFind Suite API
+# docs banner). Set via the FDIC_API_KEY repo secret / env var.
+API_KEY = os.environ.get("FDIC_API_KEY")
+
+
+def get(url, params, **kw):
+    if API_KEY:
+        params = {**params, "api_key": API_KEY}
+    return requests.get(url, params=params, **kw)
 
 # Metrics tracked through time (kept lean to limit payload).
 HIST_FIELDS = [
@@ -35,7 +46,7 @@ HIST_FIELDS = [
 
 
 def latest_repdte():
-    r = requests.get(
+    r = get(
         f"{API}/financials",
         params={"fields": "REPDTE", "sort_by": "REPDTE",
                 "sort_order": "DESC", "limit": 1, "format": "json"},
@@ -66,7 +77,7 @@ def fetch_quarter(repdte, cap):
             "fields": ",".join(HIST_FIELDS),
             "limit": limit, "offset": offset, "format": "json",
         }
-        r = requests.get(f"{API}/financials", params=params, timeout=60)
+        r = get(f"{API}/financials", params=params, timeout=60)
         r.raise_for_status()
         batch = r.json().get("data", [])
         if not batch:

@@ -21,6 +21,7 @@ first, so a manual rerun without redoing the earlier steps doesn't double-count
 (see the ft_targets.csv idempotency gotcha in 11_state_licenses.py).
 """
 
+import os
 import time
 import numpy as np
 import pandas as pd
@@ -28,6 +29,16 @@ import requests
 
 API = "https://api.fdic.gov/banks"
 FIELDS = ["CERT", "DEPSUMBR", "STCNTYBR", "STALPBR", "CNTYNAMB", "YEAR"]
+
+# FDIC requires an api.data.gov key starting 2026-09-08 (see BankFind Suite API
+# docs banner). Set via the FDIC_API_KEY repo secret / env var.
+API_KEY = os.environ.get("FDIC_API_KEY")
+
+
+def get(url, params, **kw):
+    if API_KEY:
+        params = {**params, "api_key": API_KEY}
+    return requests.get(url, params=params, **kw)
 
 SHARE_MIN = 0.03      # only trust a share trend once the bank holds a real position
 SHARE_RISE = 0.01     # +1 point YoY
@@ -44,7 +55,7 @@ SODSERVICE = {
 
 
 def resolve_years():
-    r = requests.get(f"{API}/sod", params={
+    r = get(f"{API}/sod", params={
         "fields": "YEAR", "sort_by": "YEAR", "sort_order": "DESC",
         "limit": 1, "format": "json",
     }, timeout=60)
@@ -64,7 +75,7 @@ def fetch_year(year):
             "offset": offset,
             "format": "json",
         }
-        r = requests.get(f"{API}/sod", params=params, timeout=60)
+        r = get(f"{API}/sod", params=params, timeout=60)
         r.raise_for_status()
         batch = r.json().get("data", [])
         if not batch:

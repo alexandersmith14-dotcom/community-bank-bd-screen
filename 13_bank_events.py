@@ -27,6 +27,7 @@ Rewrites output/targets.csv in place, same pattern as 05_trajectory.py /
 previously appended signals+score before recomputing.
 """
 
+import os
 import re
 import time
 from datetime import date
@@ -36,6 +37,17 @@ import requests
 from rapidfuzz import fuzz
 
 API = "https://api.fdic.gov/banks"
+
+# FDIC requires an api.data.gov key starting 2026-09-08 (see BankFind Suite API
+# docs banner). Set via the FDIC_API_KEY repo secret / env var.
+API_KEY = os.environ.get("FDIC_API_KEY")
+
+
+def get(url, params, **kw):
+    if API_KEY:
+        params = {**params, "api_key": API_KEY}
+    return requests.get(url, params=params, **kw)
+
 
 MERGER_LOOKBACK_MONTHS = 36
 FAILURE_LOOKBACK_YEARS = 5
@@ -72,7 +84,7 @@ def fetch_all(endpoint, filters, fields):
             "offset": offset,
             "format": "json",
         }
-        r = requests.get(f"{API}/{endpoint}", params=params, timeout=60)
+        r = get(f"{API}/{endpoint}", params=params, timeout=60)
         r.raise_for_status()
         batch = r.json().get("data", [])
         if not batch:

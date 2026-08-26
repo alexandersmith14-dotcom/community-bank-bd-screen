@@ -20,6 +20,9 @@ permissions:
 jobs:
   refresh:
     runs-on: ubuntu-latest
+    env:
+      # Required by api.fdic.gov starting 2026-09-08. Registered at api.data.gov.
+      FDIC_API_KEY: ${{ secrets.FDIC_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
