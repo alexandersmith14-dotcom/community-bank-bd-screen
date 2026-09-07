@@ -2,7 +2,7 @@ signal,banks_flagged,service_line,weight
 funding_liquidity,945,KR RAS (partial): Internal Audit of liquidity/funding risk controls; ALM advisory is another practice,10
 excess_capital,819,Refer: capital deployment / M&A (other KR practice); RAS angle = M&A compliance due diligence,5
 weak_efficiency,800,KR RAS: Robotic Process Automation (RPA) + Internal Audit process review,15
-credit_deterioration,719,KR RAS: Internal Audit loan review + CECL model validation + ALLL/CECL governance,18
+credit_deterioration,720,KR RAS: Internal Audit loan review + CECL model validation + ALLL/CECL governance,18
 high_uninsured_deposits,615,KR RAS: liquidity/funding risk assessment + Internal Audit — deposit base concentrated in uninsured accounts (the SVB/Signature/First Republic profile),22
 weak_profitability,611,Refer: earnings / margin advisory (other KR practice); RAS angle = cost automation via RPA,5
 ag_concentration,445,KR RAS: agricultural loan review + credit risk review — concentration exposed to commodity-price / farm-income cycles,12
