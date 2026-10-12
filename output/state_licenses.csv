@@ -1,4 +1,5 @@
 SRC_STATE,COMPANY,ADDRESS,CITY,STALP,ZIP
+FL,10 PAYDAY LLC,4812 W COMMERCIAL BLVD,TAMARAC,FL,33319
 FL,1966 FOODS INC,2602 W KENNEDY BLVD,TAMPA,FL,33609
 FL,"1MONEY USA, INC.",575 5TH AVENUE,NEW YORK,NY,10017
 FL,2 GG ENTERPRISES LLC,28945 S DIXIE HWY,HOMESTEAD,FL,33033
@@ -86,7 +87,7 @@ FL,"BILLGO MT, INC.",3003 E. HARMONY RD.,FORT COLLINS,CO,80528
 FL,BILT PAYMENTS LLC,31 BOND STREET,NEW YORK,NY,10012
 FL,BISMILLAH MANAGEMENT SERVICES 2 LLC,4120 NW 21ST STREET,LAUDERHILL,FL,33313
 FL,"BITFLYER USA, INC.","548 MARKET ST, #25696",SAN FRANCISCO,CA,94104
-FL,BITGO TECHNOLOGIES LLC,2443 ASH STREET,PALO ALTO,CA,94306
+FL,BITGO TECHNOLOGIES LLC,101 S. REID ST SUITE 307,SIOUX FALLS,SD,57103
 FL,"BITPAY, INC.",10400 OLD ALABAMA RD CONNECTOR,ALPHARETTA,GA,30022
 FL,"BITRAIL, LLC",1240 TANGELO TERRACE,DELRAY BEACH,FL,33444
 FL,"BITSTAMP USA, INC.",85 WILLOW ROAD,MENLO PARK,CA,94025
@@ -214,7 +215,7 @@ FL,"EZMART, INC",4601 POWERLINE ROAD,OAKLAND PARK,FL,33309
 FL,EZREMIT LLC,2505 PLEASANTDALE ROAD,ATLANTA,GA,30340
 FL,FACC SERVICES GROUP LLC,3544 MACLAY BLVD,TALLAHASSEE,FL,32312
 FL,FAIROUZ INVESTMENT INC,4100 W OAKLAND PARK BLVD,LAUDERDALE LAKES,FL,33313
-FL,"FALCONX DELTA, INC.",1850 GATEWAY DRIVE,SAN MATEO,CA,94404
+FL,"FALCONX DELTA, INC.",9850 N. CENTRAL EXPY,DALLAS,TX,75231
 FL,FAST PAYDAY LOANS INC,5675 WEST FLAGLER STREET,MIAMI,FL,33134
 FL,FAST SUPER ENVIOS CORP,12555 COLLIER BLVD UNIT 4,NAPLES,FL,34116
 FL,FASTERPAY INC,3305 SPRING MOUNTAIN ROAD,LAS VEGAS,NV,89102
@@ -231,6 +232,7 @@ FL,"FINXERA, INC.",2001 WESTSIDE PARKWAY,ALPHARETTA,GA,30004
 FL,FIREBLOCKS LLC,5 PENN PLAZA,NEW YORK,NY,10001
 FL,FLAMINGO FINANCIAL SERVICES PLUS INC.,3171 WEST BROWARD BLVD,FORT LAUDERDALE,FL,33312
 FL,FLEXA INC.,"167 N GREEN ST, 4TH FLOOR",CHICAGO,IL,60607
+FL,"FLEXIBLE FINANCE PAYMENTS, LLC",300 PARK AVE S,NEW YORK,NY,10010-5349
 FL,FLORIDA CURRENCY EXCHANGE CORP.,250 WESTSHORE PLAZA,TAMPA,FL,33609
 FL,FLYWIRE GLOBAL CORP.,141 TREMONT STREET,BOSTON,MA,02111
 FL,"FOLMAR GUN & PAWN, INC",808 N MONROE STREET,TALLAHASSEE,FL,32303
@@ -453,6 +455,7 @@ FL,"PETRA FOOD & SERVICES, INC",1943 W SILVER SPRINGS BLVD,OCALA,FL,34475
 FL,PINGPONG GLOBAL SOLUTIONS INC,27 W 24TH ST,NEW YORK,NY,10010
 FL,PIONEX INC.,500 COLLEGE ROAD EAST,PRINCETON,NJ,08540
 FL,PLACID NK CORPORATION,7210 37TH AVENUE,JACKSON HEIGHTS,NY,11372
+FL,"PLATA CAPITAL USA, INC.",441 NINTH AVENUE,NEW YORK,NY,10001
 FL,PLAZA MEXICO INC,3061 RIFLE RANGE RD,WINTER HAVEN,FL,33880
 FL,"PNB REMITTANCE CENTERS, INC.",225 W. BROADWAY,GLENDALE,CA,91204
 FL,"POPULUS FINANCIAL GROUP, INC.",300 E. JOHN CARPENTER FWY,IRVING,TX,75062
@@ -482,6 +485,7 @@ FL,"RDRA SERVICES, INC.",1251 E. SAMPLE ROAD,POMPANO BEACH,FL,33064
 FL,REAL TIME FINANCIAL SERVICES LLC,100 SE 2ND STREET STE 2000,MIAMI,FL,33131
 FL,REALNET PAYMENTS LLC,8500 GOVERNOR'S HILL DRIVE,CINCINNATI,OH,45249
 FL,REALPAGE PAYMENTS SERVICES LLC,2201 LAKESIDE BLVD.,RICHARDSON,TX,75082
+FL,"RED ENVELOPE DELTA, INC.",200 S BISCAYNE BLVD,MIAMI,FL,33131
 FL,"RED LEAF CHICAGO, LLC",225 W WACKER DR,CHICAGO,IL,60606
 FL,"REEMO SERVICES CC, INC.",1879 W WOOLBRIGHT ROAD,BOYNTON BEACH,FL,33426
 FL,"REMITLY, INC.",401 UNION STREET,SEATTLE,WA,98101
@@ -616,7 +620,7 @@ FL,YOGIBAPA LLC,615 W DAUGHTERY RD,LAKELAND,FL,33809
 FL,"YUANSFER, INC",40 WALL STREET,NEW YORK,NY,10005
 FL,ZAIN R CORPORATION,1070 W SAMPLE RD,POMPANO BEACH,FL,33064
 FL,"ZAP SOLUTIONS, INC.",200 NORTH LASALLE ST,CHICAGO,IL,60601
-FL,ZEROHASH LLC,609 W. RANDOLPH ST.,CHICAGO,IL,60661
+FL,ZEROHASH LLC,"141 E. HOUSTON ST., FLOOR 2",NEW YORK,NY,10002
 FL,ZPAYS INC,2700 GLADES CIR,WESTON,FL,33327
 NC,"1Money USA, Inc.","575 5th Avenue Floor 14, Suite 14-107",New York,NY,10017
 NC,"Ace Payment Services, Inc.","300 E. John Carpenter Fwy., Ste. 900",Irving,TX,75062
@@ -758,7 +762,6 @@ NC,PINGPONG GLOBAL SOLUTIONS INC,"27 W 24th St, suite 704",New York,NY,10010
 NC,Pionex Inc. DBA: webot,500 College Road East,Princeton,NJ,08540
 NC,PLACID NK CORPORATION DBA: PLACID EXPRESS,"7210 37th Avenue, Unit C",Jackson Heights,NY,11372
 NC,PLS Financial Solutions of North Carolina Inc. DBA: PLS Check Cashers,"One South Wacker Drive, 36th Floor",Chicago,IL,60606
-NC,"PNB REMITTANCE CENTERS, INC. DBA: PNB Global Remit","225 W. Broadway, Suite 301",Glendale,CA,91204
 NC,"Populus Financial Group, Inc. DBA: ACE Cash Express","300 E. John Carpenter Fwy, Suite 900",Irving,TX,75062
 NC,"Provenance Technologies, Inc. DBA: Fiant","650 California Street, Suite 07-126",San Francisco,CA,94108
 NC,"RAM Payment, LLC DBA: Reliant","412 N Cedar Bluff, Suite 400",Knoxville,TN,37923
@@ -774,6 +777,7 @@ NC,"ROCKITCOIN, LLC","325 West Huron, Suite 310",Chicago,IL,60654
 NC,Sendsprint Inc.,"999 Riverview Drive, Suite 201 - Room 239",Totowa,NJ,07512
 NC,"Servicio UniTeller, Inc.","218 Route 17 North, 4th Floor",Rochelle Park,NJ,07662
 NC,Shaka Express Corp,"2828 John F Kennedy Blvd, Room 205",Jersey City,NJ,07306
+NC,Shopify Financial Services Inc.,"85 10th Ave, Suite 800",New York,NY,10011
 NC,"Skrill USA, Inc. DBA: Skrill","Town Center Two, 5335 Gate Parkway, 4th Floor",Jacksonville,FL,32256
 NC,"SOUTH EXCHANGE, INC DBA: South Exchange Money Transfers","1111 Brickell Ave, Suite 2940",Miami,FL,33131
 NC,"Spectrum Global Payment Solutions, Inc.","2200 Post Oak Blvd., Suite 2150",Houston,TX,77056
@@ -1056,7 +1060,7 @@ MA,AFRICA REMITTANCE COMPANY LLC,2828 JOHN F KENNEDY BOULEVARD SUITE 203,JERSEY 
 MA,Amal Financial Inc.,6260 North Clark Street,Chicago,IL,
 MA,"Amazon Payments, Inc.",410 Terry Ave N,Seattle,WA,
 MA,"American Express Travel Related Services Company, Inc.",200 Vesey Street,New York,NY,
-MA,Apple Payments Inc.,6900 W. Parmer Lane Office No. AC1-2225,Austin,TX,
+MA,Apple Payments Inc.,6900 W. Parmer Lane Office No. AC03-2301,Austin,TX,
 MA,"AscendantFX Capital USA, Inc.",3478 Buskirk Avenue Suite 1000,Pleasant Hill,CA,
 MA,"AUS Merchant Services, Inc.",525 Almanor Avenue,Sunnyvale,CA,
 MA,"AvidXchange, Inc.",1210 AvidXchange Lane,Charlotte,NC,
@@ -1067,9 +1071,11 @@ MA,"Betrlink, LLC",250 Broadway 28th Floor,New York,NY,
 MA,"BitPay, Inc.",10400 Old Alabama Rd Connector Suite 400,Alpharetta,GA,
 MA,Bivo Inc.,2947B Whipple Road Suite #125,Union City,CA,
 MA,"Block, Inc.",1955 Broadway Suite 600,Oakland,CA,
+MA,Breeze Labs Payments Inc.,621 SW Morrison St STE #800,Portland,OR,
 MA,CAMBRIDGE MERCANTILE CORP. (U.S.A.),300 Park Ave Suite 1203,New York,NY,
 MA,CAMBRIDGE MERCANTILE CORP. (U.S.A.),300 Park Ave Suite 1203,New York,NY,
 MA,"Caribbean Airmail, Inc.",9425 Sunset Drive Suite 249,Miami,FL,
+MA,CEX.IO CORP.,100 SE 2nd St Suite 3852,Miami,FL,
 MA,CheckFreePay Corporation,2900 Westside Parkway,Alpharetta,GA,
 MA,"Checkout US, INC.",40 10th Avenue 4th Floor,New York,NY,
 MA,"Circle Internet Financial, LLC",1 Lincoln Street Suite 31-113,Boston,MA,
@@ -1082,6 +1088,7 @@ MA,"DOLEX DOLLAR EXPRESS, INC.",10777 Westheimer Rd. Suite 1040,Houston,TX,
 MA,DPAYMENTS LLC,100 SE Second Street Suite 3800,Miami,FL,
 MA,"Ethos Payment Solutions, Inc.",370 W Las Colinas Blvd Ste 108,Irving,TX,
 MA,"Finxera, Inc.",2001 Westside Parkway Suite 155,Alpharetta,GA,
+MA,"Gate US, Inc.",5201 Great America Pkwy. Suite 320,Santa Clara,CA,
 MA,Girosol of Massachusetts Corp.,16666 NE 19 Avenue Suite 102,North Miami Beach,FL,
 MA,"Golden Money Transfer, Inc.",45 Prospect Street Suite 201,Cambridge,MA,
 MA,Google Payment Corp.,1600 Amphitheatre Parkway,Mountain View,CA,
@@ -1098,15 +1105,16 @@ MA,"Intermex Wire Transfer, LLC",9100 S. Dadeland Blvd Suite 1100,Miami,FL,
 MA,"Intermex Wire Transfer, LLC",9100 S. Dadeland Blvd Suite 1100,Miami,FL,
 MA,"Intermex Wire Transfer, LLC",9100 S. Dadeland Blvd Suite 1100,Miami,FL,
 MA,"Intermex Wire Transfer, LLC",9100 S. Dadeland Blvd Suite 1100,Miami,FL,
+MA,"Internet Escrow Services, Inc.",Suite 650 180 Montgomery Street,San Francisco,CA,
 MA,Intuit Payments Inc.,2700 Coast Avenue,Mountain View,CA,
 MA,"JN MONEY SERVICES (USA), INC.",690 - 700 Utica Avenue,Brooklyn,NY,
 MA,"JN MONEY SERVICES (USA), INC.",690 - 700 Utica Avenue,Brooklyn,NY,
 MA,"Keefe Commissary Network, L.L.C.",10880 Lin Page Place,Saint Louis,MO,
-MA,"LL Pay U.S., LLC","666 Third Avenue 6th Floor, Suite 615",New York,NY,
+MA,"LL Pay U.S., LLC","666 Third Avenue 6th Floor, Suite 614",New York,NY,
 MA,LYONS XPRESS INC,26 WILSON AVE,NEWARK,NJ,
 MA,Mastercard Transaction Services (US) LLC,150 Fifth Avenue,New York,NY,
 MA,Maxitransfers LLC,222 W Las Colinas Blvd Suite 2000 N Tower,Irving,TX,
-MA,"MEMO Financial Services, Inc.",1029 Mumma Road,Wormleysburg,PA,
+MA,"MEMO Financial Services America, Inc.",1029 Mumma Road,Wormleysburg,PA,
 MA,Meta Payments Inc.,1 Meta Way,Menlo Park,CA,
 MA,Monex Inc.,1101 K Street NW STE 600,Washington,DC,
 MA,Moneycorp US Inc.,1 Park Row Suite 403,Providence,RI,
@@ -1128,6 +1136,7 @@ MA,Payment Progress LLC,12 Broad Street Suite 403,Red Bank,NJ,
 MA,"PayPal Digital, Inc.",117 Barrow St,New York,NY,
 MA,"PayPal, Inc.",2211 N. First Street,San Jose,CA,
 MA,"PayPal, Inc.",2211 N. First Street,San Jose,CA,
+MA,PINGPONG GLOBAL SOLUTIONS INC,"27 W 24th St, suite 704",New York,NY,
 MA,"PLS Financial Solutions of Massachusetts, Inc.",781 Tremont Street,Boston,MA,
 MA,"PLS Financial Solutions of Massachusetts, Inc.",781 Tremont Street,Boston,MA,
 MA,"Provenance Technologies, Inc.",650 California Street Suite 07-126,San Francisco,CA,
@@ -1143,7 +1152,7 @@ MA,TabaPay Payment Services LLC,450 Cambridge Ave,Palo Alto,CA,
 MA,TapTap Send Payments Co.,1450 Broadway Suite 11-104,New York,NY,
 MA,"TIAGN I, Inc.",864 Spring St NW,Atlanta,GA,
 MA,"Transfermate, Inc.",5555 Glenridge Connector Suite 200,Atlanta,GA,
-MA,"Trustly, Inc.","335 Bryant Street, Ste 300",Palo Alto,CA,
+MA,"Trustly, Inc.",535 Mission Street Number 1825,San Francisco,CA,
 MA,U.S. Money Express Co.,5395 N Milwaukee Ave,Chicago,IL,
 MA,USForex Inc.,"49 Stevenson St., 13th Floor",San Francisco,CA,
 MA,Veem Payments Inc.,1160 Battery St. East  Suite 100,San Francisco,CA,
@@ -1158,6 +1167,6 @@ MA,Wizz Cross Border USA Inc.,33 Wood Avenue South Suite 668,Iselin,NJ,
 MA,WorldRemit Corp.,100 Hano St Ste. 9,Boston,MA,
 MA,WorldRemit Corp.,100 Hano St Ste. 9,Boston,MA,
 MA,WorldRemit Corp.,100 Hano St Ste. 9,Boston,MA,
-MA,XPS 247 INC,2365 Dog Leg Court,Brooksville,FL,
+MA,XPS 247 INC,4278 Montgomery Street,Brooksville,FL,
 MA,"Zap Solutions, Inc.",200 North LaSalle Street Suite 2360,Chicago,IL,
-MA,zerohash llc,327 N Aberdeen St,Chicago,IL,
+MA,zerohash llc,609 W. Randolph St. Suite 600,Chicago,IL,
